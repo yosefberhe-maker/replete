@@ -31,6 +31,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# replete app data (JSON storage for MVP)
+/data/waitlist.json
+/data/reddit-posts.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
