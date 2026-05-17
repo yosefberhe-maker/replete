@@ -22,9 +22,12 @@ except FileNotFoundError:
     papers = []
 
 # Keywords aligned to Replete's tracked nutrients + lean-mass framing.
+# GLP-1 synonyms added to widen synonym matching.
 existing_keywords = [
     "vitamin d", "iron", "magnesium", "protein", "potassium", "choline",
     "thiamine", "b12", "calcium", "fiber", "zinc", "lean mass",
+    "glucagon-like peptide", "glp-1 receptor agonist", "semaglutide",
+    "tirzepatide", "liraglutide", "lean tissue", "muscle mass", "sarcopenia",
 ]
 
 results = []

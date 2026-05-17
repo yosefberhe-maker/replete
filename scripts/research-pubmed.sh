@@ -5,7 +5,7 @@
 set -e
 
 OUTPUT="${1:-.agent-session/new-papers.json}"
-SEARCH_TERMS="GLP-1+receptor+agonist+nutrition+supplement+deficiency"
+SEARCH_TERMS="(GLP-1+receptor+agonist+OR+glucagon-like+peptide+OR+semaglutide+OR+tirzepatide+OR+liraglutide)+AND+(nutrition+OR+supplement+OR+deficiency+OR+lean+mass+OR+lean+tissue+OR+muscle+mass+OR+sarcopenia)"
 MIN_DATE="$(date -d '90 days ago' +%Y/%m/%d 2>/dev/null || date -v-90d +%Y/%m/%d)"  # 90-day lookback
 BASE_URL="https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
