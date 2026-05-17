@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "description": "Immutable registry of all health claims processed by the Replete agent",
+  "registry": [],
+  "last_updated": null,
+  "total_verified": 0,
+  "total_rejected": 0
+}

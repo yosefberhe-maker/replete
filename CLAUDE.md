@@ -384,4 +384,57 @@ Do not skip ahead. Each component depends on the previous.
 
 ---
 
+## Autonomous Agent Configuration
+
+### Agent Role
+This repo is managed by an autonomous research agent that:
+1. Searches PubMed for new GLP-1 clinical papers weekly
+2. Validates health claims against current `supplement-data.ts`
+3. Proposes updates when new evidence supersedes existing data
+4. Runs the full test suite before any commit
+5. Maintains an audit trail in `.agent-session/task-log.jsonl`
+
+### Running the Agent
+
+```bash
+bash scripts/agent-run.sh           # Full run
+bash scripts/agent-run.sh --dry-run # Preview only, no commits
+```
+
+### Agent Memory
+
+- `.agent-session/claim-registry.json` — all claims ever processed
+- `.agent-session/last-verified.json` — last scan timestamp + next research topics
+- `.agent-session/task-log.jsonl` — full audit trail (append-only)
+
+### Safety Rules (Hardwired)
+
+- NEVER commit unverified medical claims
+- NEVER push to main without passing `pnpm test`
+- NEVER modify test files
+- NEVER delete existing verified claims without documented supersession
+- ALL clinical data changes require a source PMID in the commit message
+
+### Context → Action → Verify Loop
+
+Every agent cycle follows:
+
+1. **CONTEXT**: Read `last-verified.json` + `claim-registry.json`
+2. **ACTION**: Research papers → extract claims → validate
+3. **VERIFY**: `pnpm test` must pass before any write
+
+### Skills Available
+
+- `/research-papers` — search PubMed for new studies
+- `/validate-claims` — cross-check claims vs codebase
+- `/update-codebase` — apply verified findings
+
+### Sub-agents
+
+- `researcher` — finds and summarizes papers (read-only, no git)
+- `validator` — grades evidence (A/B/C) and decides write eligibility
+- `engineer` — minimal source edits + tests + commit with `Sourced: PMID:` trailer
+
+---
+
 *Last updated: May 2026. Maintained by Yosef Berhe.*

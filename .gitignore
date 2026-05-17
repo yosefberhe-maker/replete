@@ -34,6 +34,15 @@ yarn-error.log*
 # replete app data (JSON storage for MVP)
 /data/waitlist.json
 /data/reddit-posts.json
+/data/shared-profiles.json
+
+# agent runtime artifacts (the seed JSONs are tracked; runtime output is not)
+/.agent-session/task-log.jsonl
+/.agent-session/new-papers.json
+/.agent-session/validated-claims.json
+/.agent-session/tests.passed
+/.agent-session/test-results.log
+/.agent-worktrees/
 
 # typescript
 *.tsbuildinfo
