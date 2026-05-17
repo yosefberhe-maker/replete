@@ -68,7 +68,7 @@ export default function CyclePhaseCard({ cycle }: Props) {
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-green">
               <Droplet className="h-3.5 w-3.5" />
-              Today's focus
+              Today&apos;s focus
             </p>
             <ul className="mt-2 flex flex-col gap-2 text-sm text-text">
               {cycle.actions.map((a) => (

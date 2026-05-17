@@ -75,7 +75,7 @@ export default function GISupport({ gi }: Props) {
       </div>
 
       <h2 className="mt-3 text-lg font-bold text-text sm:text-xl">
-        Adjustments while you're symptomatic
+        Adjustments while you&apos;re symptomatic
       </h2>
       <p className="mt-1 text-sm text-sub">
         These override your standard stack until the symptom resolves.

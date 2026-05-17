@@ -13,6 +13,7 @@ const SAMPLE_PROFILE: DeficiencyProfile = {
   choline: 60,
   potassium: 43,
   fiber: 88,
+  thiamine: 20,
   overallScore: 65,
   riskTier: "high",
   dailyProteinTargetG: 124,
