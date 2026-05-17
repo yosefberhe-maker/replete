@@ -123,7 +123,10 @@ export default function ResultsPage() {
     <div className="bg-gradient-hero">
       <header className="container-page flex items-center justify-between py-6">
         <RepleteWordmark />
-        <Link href="/intake" className="text-xs text-muted hover:text-text">
+        <Link
+          href="/intake"
+          className="inline-flex min-h-[44px] items-center px-2 text-xs text-muted hover:text-text"
+        >
           Re-run intake
         </Link>
       </header>

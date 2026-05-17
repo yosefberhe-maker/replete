@@ -23,11 +23,21 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100dvh;
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* iOS auto-zooms <input> if font-size is <16px. Lock inputs and textareas to 16px on small screens. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 ::selection {
@@ -69,10 +79,10 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-green px-5 py-3 text-sm font-semibold text-bg transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-lg bg-green px-5 py-3 text-sm font-semibold text-bg transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-lg border border-border bg-transparent px-5 py-3 text-sm font-semibold text-text transition-colors hover:bg-card2;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-lg border border-border bg-transparent px-5 py-3 text-sm font-semibold text-text transition-colors hover:bg-card2;
   }
 }

@@ -33,14 +33,14 @@ export default async function HomePage() {
       <header className="border-b border-border/60 bg-bg/80 backdrop-blur">
         <div className="container-page flex h-14 items-center justify-between">
           <RepleteWordmark />
-          <nav className="flex items-center gap-4 text-sm">
+          <nav className="flex items-center gap-2 text-sm">
             <Link
               href="/intake"
-              className="text-sub transition-colors hover:text-text"
+              className="hidden min-h-[44px] items-center px-2 text-sub transition-colors hover:text-text sm:inline-flex"
             >
               Take the intake
             </Link>
-            <Link href="/intake" className="btn-primary hidden sm:inline-flex">
+            <Link href="/intake" className="btn-primary">
               Get my plan
             </Link>
           </nav>
