@@ -10,12 +10,26 @@
  */
 
 import { NextResponse } from "next/server";
-import { appendWaitlistEntry } from "@/lib/storage";
+import { appendWaitlistEntry, readWaitlist } from "@/lib/storage";
 import { rewriteEmailPlaceholders, sendEmail } from "@/lib/email-client";
 import { welcomeEmail } from "@/lib/email-sequences";
 import type { DeficiencyProfile, IntakeData } from "@/types";
 
 export const runtime = "nodejs";
+
+/**
+ * Public, read-only count endpoint for clients that need it (e.g. SPA
+ * components polling for live count). The marketing landing page reads the
+ * file directly server-side — both paths return the same number.
+ */
+export async function GET(): Promise<Response> {
+  try {
+    const entries = await readWaitlist();
+    return NextResponse.json({ count: entries.length });
+  } catch {
+    return NextResponse.json({ count: 0 });
+  }
+}
 
 interface WaitlistRequest {
   email?: string;

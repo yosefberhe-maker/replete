@@ -9,19 +9,20 @@ import { readWaitlist } from "@/lib/storage";
 export const dynamic = "force-dynamic";
 
 /**
- * Social-proof base: seed count added to the live waitlist file count.
- * Anchors the displayed total at a credible early number while keeping the
- * delta honest as real signups arrive.
+ * Social-proof base added to the real waitlist count. Display format is
+ * always "<count + seed>+". Falls back to a hardcoded "2,400+" if the
+ * storage read fails (Vercel ephemeral FS, missing file, etc.).
  */
 const WAITLIST_SEED = 1847;
+const WAITLIST_FALLBACK = "2,400+";
 
 async function getWaitlistDisplay(): Promise<string> {
   try {
     const entries = await readWaitlist();
-    const total = WAITLIST_SEED + entries.length;
-    return total.toLocaleString();
+    const total = entries.length + WAITLIST_SEED;
+    return `${total.toLocaleString()}+`;
   } catch {
-    return WAITLIST_SEED.toLocaleString();
+    return WAITLIST_FALLBACK;
   }
 }
 

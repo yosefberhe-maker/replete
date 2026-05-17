@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Disclaimer from "@/components/Disclaimer";
 import "./globals.css";
 
 const inter = Inter({
@@ -60,11 +61,9 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="bg-bg text-text font-sans flex min-h-dvh flex-col">
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-border bg-bg/80 py-4 text-center text-xs text-muted">
+        <footer className="border-t border-border bg-bg/80 py-4">
           <div className="container-page">
-            Replete provides general nutritional information based on published
-            clinical research. This is not medical advice. Consult your
-            healthcare provider before starting any supplement regimen.
+            <Disclaimer variant="footer" />
           </div>
         </footer>
       </body>

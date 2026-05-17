@@ -12,6 +12,9 @@ import CyclePhaseCard from "@/components/CyclePhaseCard";
 import GISupport from "@/components/GISupport";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import ShareProfileButton from "@/components/ShareProfileButton";
+import FindRD from "@/components/FindRD";
+import Disclaimer from "@/components/Disclaimer";
+import ReviewedBadge from "@/components/ReviewedBadge";
 import { RepleteWordmark } from "@/components/RepleteWordmark";
 import { DRUG_LABEL, DURATION_LABEL, DIET_LABEL, DOSE_LABEL } from "@/lib/copy";
 import { getRiskLabel } from "@/lib/deficiency-engine";
@@ -141,6 +144,9 @@ export default function ResultsPage() {
               : "s"}{" "}
             reported · {intake.weightLbs} lb
           </p>
+          <div className="mt-3">
+            <ReviewedBadge />
+          </div>
         </section>
 
         <section className="mt-6">
@@ -239,6 +245,13 @@ export default function ResultsPage() {
           <div className="mt-4">
             <SupplementStack supplements={supplements} />
           </div>
+          <div className="mt-4">
+            <Disclaimer variant="inline" />
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <FindRD />
         </section>
 
         <section className="mt-10">
@@ -282,6 +295,10 @@ export default function ResultsPage() {
               before.
             </p>
           </div>
+        </section>
+
+        <section className="mt-10">
+          <Disclaimer variant="results" />
         </section>
       </main>
     </div>
