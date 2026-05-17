@@ -89,7 +89,7 @@ export function welcomeEmail(
   intake: IntakeData,
 ): EmailPayload {
   const top = topDeficiencies(profile, 3);
-  const supplements = getSupplementRecommendations(profile)
+  const supplements = getSupplementRecommendations(profile, intake)
     .filter((s) => !s.foodOnly)
     .slice(0, 2);
 
@@ -175,8 +175,11 @@ export function day7Email(): EmailPayload {
   };
 }
 
-export function day14Email(profile: DeficiencyProfile): EmailPayload {
-  const recs = getSupplementRecommendations(profile)
+export function day14Email(
+  profile: DeficiencyProfile,
+  intake: IntakeData,
+): EmailPayload {
+  const recs = getSupplementRecommendations(profile, intake)
     .filter((s) => !s.foodOnly)
     .slice(0, 5);
   const items = recs

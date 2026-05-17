@@ -1,26 +1,45 @@
 /**
  * Replete shared types. Single source of truth for the deficiency engine,
- * intake wizard, and results dashboard.
+ * intake wizard, results dashboard, injection-cycle engine, and GI protocol.
  */
 
 export type Drug = "sema" | "tirz" | "other";
 export type Duration = "0-3" | "3-6" | "6-12" | "12+";
 export type Dose = "starter" | "moderate" | "high";
 export type Diet = "omni" | "veg" | "vegan" | "keto";
+export type Sex = "male" | "female";
+export type AgeRange = "18-34" | "35-49" | "50-64" | "65+";
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active";
+export type DayOfWeek =
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat"
+  | "sun";
+export type InjectionTiming = "morning" | "evening";
 export type Symptom =
   | "fatigue"
   | "hairloss"
   | "muscle"
   | "brainfog"
   | "nausea"
+  | "constipation"
   | "none";
 
 export interface IntakeData {
   drug: Drug;
   duration: Duration;
   dose: Dose;
+  weightLbs: number;
+  sex: Sex;
+  ageRange: AgeRange;
+  activityLevel: ActivityLevel;
   diet: Diet;
   symptoms: Symptom[];
+  injectionDay: DayOfWeek;
+  injectionTiming: InjectionTiming;
 }
 
 export type NutrientKey =
@@ -31,7 +50,8 @@ export type NutrientKey =
   | "zinc"
   | "vitaminD"
   | "choline"
-  | "potassium";
+  | "potassium"
+  | "fiber";
 
 export type RiskTier = "high" | "moderate" | "low";
 
@@ -44,8 +64,11 @@ export interface DeficiencyProfile {
   vitaminD: number;
   choline: number;
   potassium: number;
+  fiber: number;
   overallScore: number;
   riskTier: RiskTier;
+  /** Body-weight-based daily protein target, in grams. */
+  dailyProteinTargetG: number;
 }
 
 export type SupplementPriority = "critical" | "high" | "support";
@@ -63,6 +86,39 @@ export interface SupplementRecommendation {
   caution?: string;
   /** True if this is a food-only recommendation (e.g. potassium). */
   foodOnly?: boolean;
+  /** Daily target amount, formatted for display (e.g. "400 mg/day"). */
+  dailyTargetAmount?: string;
+  /** Estimated current intake on a GLP-1, for comparison with target. */
+  currentEstimatedIntake?: string;
+  /** Unsafe-stacking or drug-interaction warning. */
+  safetyNote?: string;
+}
+
+export type CyclePhase = "peak" | "plateau" | "trough";
+
+export interface CycleAdvice {
+  phase: CyclePhase;
+  dayOfCycle: number;
+  headline: string;
+  actions: string[];
+  avoid: string[];
+}
+
+export interface GIProtocol {
+  active: boolean;
+  triggers: Array<"nausea" | "constipation">;
+  fluidTargetLitres: number;
+  priorityRecommendations: string[];
+  pauseSupplements: string[];
+  proteinForm: "liquid-only" | "preferred-liquid" | "any";
+  notes: string[];
+}
+
+export interface SafetyAlert {
+  id: string;
+  severity: "warning" | "info";
+  title: string;
+  body: string;
 }
 
 export interface Meal {
@@ -89,5 +145,8 @@ export interface CompleteProfile {
   profile: DeficiencyProfile;
   supplements: SupplementRecommendation[];
   mealPlan: MealPlan;
+  cycle: CycleAdvice;
+  gi: GIProtocol;
+  safetyAlerts: SafetyAlert[];
   generatedAt: string;
 }

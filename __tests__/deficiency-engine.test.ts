@@ -1,17 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateDeficiencies,
+  calculateProteinTargetG,
   getRiskLabel,
   NUTRIENT_KEYS,
 } from "@/lib/deficiency-engine";
 import { getSupplementRecommendations } from "@/lib/supplement-data";
 import { getMealPlan } from "@/lib/meal-data";
+import { getCycleAdvice, getCyclePhase } from "@/lib/injection-cycle";
+import { getGIProtocol } from "@/lib/gi-protocol";
+import { getSafetyAlerts } from "@/lib/safety-alerts";
 import type {
+  ActivityLevel,
+  AgeRange,
   Diet,
   Dose,
   Drug,
   Duration,
   IntakeData,
+  Sex,
   Symptom,
 } from "@/types";
 
@@ -21,18 +28,33 @@ const baseIntake: IntakeData = {
   dose: "starter",
   diet: "omni",
   symptoms: ["none"],
+  sex: "male",
+  ageRange: "35-49",
+  activityLevel: "moderate",
+  weightLbs: 180,
+  injectionDay: "mon",
+  injectionTiming: "morning",
 };
 
 const drugs: Drug[] = ["sema", "tirz", "other"];
 const durations: Duration[] = ["0-3", "3-6", "6-12", "12+"];
 const doses: Dose[] = ["starter", "moderate", "high"];
 const diets: Diet[] = ["omni", "veg", "vegan", "keto"];
+const sexes: Sex[] = ["male", "female"];
+const ages: AgeRange[] = ["18-34", "35-49", "50-64", "65+"];
+const activities: ActivityLevel[] = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+];
 const symptoms: Symptom[] = [
   "fatigue",
   "hairloss",
   "muscle",
   "brainfog",
   "nausea",
+  "constipation",
   "none",
 ];
 
@@ -62,6 +84,7 @@ describe("calculateDeficiencies — score bounds", () => {
         for (const dose of doses) {
           for (const diet of diets) {
             const profile = calculateDeficiencies({
+              ...baseIntake,
               drug,
               duration,
               dose,
@@ -106,6 +129,80 @@ describe("calculateDeficiencies — diet modifiers", () => {
     const keto = calculateDeficiencies({ ...baseIntake, diet: "keto" });
     expect(keto.potassium - omni.potassium).toBe(25);
   });
+
+  it("keto raises choline (+10) over omni baseline", () => {
+    const omni = calculateDeficiencies({ ...baseIntake, diet: "omni" });
+    const keto = calculateDeficiencies({ ...baseIntake, diet: "keto" });
+    expect(keto.choline - omni.choline).toBe(10);
+  });
+});
+
+describe("calculateDeficiencies — fiber is a universal gap", () => {
+  it("starts at base 70 for every diet at starter dose / 0-3 months", () => {
+    for (const diet of diets) {
+      const profile = calculateDeficiencies({ ...baseIntake, diet });
+      expect(profile.fiber).toBeGreaterThanOrEqual(70);
+    }
+  });
+
+  it("constipation symptom raises fiber +20", () => {
+    const none = calculateDeficiencies({ ...baseIntake, symptoms: ["none"] });
+    const con = calculateDeficiencies({
+      ...baseIntake,
+      symptoms: ["constipation"],
+    });
+    expect(con.fiber - none.fiber).toBe(20);
+  });
+});
+
+describe("calculateDeficiencies — choline baseline", () => {
+  it("uses 55 as base (Grok: 305 mg avg vs 425-550 AI)", () => {
+    const profile = calculateDeficiencies(baseIntake);
+    expect(profile.choline).toBeGreaterThanOrEqual(55);
+  });
+});
+
+describe("calculateDeficiencies — vitamin D long-duration jump", () => {
+  it("12+ months adds an EXTRA +25 to vitamin D beyond standard duration boost", () => {
+    const early = calculateDeficiencies({ ...baseIntake, duration: "0-3" });
+    const sixMo = calculateDeficiencies({ ...baseIntake, duration: "6-12" });
+    const yearPlus = calculateDeficiencies({ ...baseIntake, duration: "12+" });
+    // 12+ duration boost is 52, 0-3 is 0 → +52 standard.
+    // Plus extra +25 long-duration vitamin D boost → +77 (clamped to 95 if base+other pushes over).
+    expect(yearPlus.vitaminD - early.vitaminD).toBeGreaterThan(
+      sixMo.vitaminD - early.vitaminD,
+    );
+  });
+});
+
+describe("calculateDeficiencies — sex modifier on iron", () => {
+  it("pre-menopausal women (18-34, 35-49) get +15 iron", () => {
+    const male = calculateDeficiencies({
+      ...baseIntake,
+      sex: "male",
+      ageRange: "35-49",
+    });
+    const female = calculateDeficiencies({
+      ...baseIntake,
+      sex: "female",
+      ageRange: "35-49",
+    });
+    expect(female.iron - male.iron).toBe(15);
+  });
+
+  it("post-menopausal women (50-64, 65+) do not get the iron boost", () => {
+    const male = calculateDeficiencies({
+      ...baseIntake,
+      sex: "male",
+      ageRange: "65+",
+    });
+    const female = calculateDeficiencies({
+      ...baseIntake,
+      sex: "female",
+      ageRange: "65+",
+    });
+    expect(female.iron).toBe(male.iron);
+  });
 });
 
 describe("calculateDeficiencies — duration + dose", () => {
@@ -121,19 +218,6 @@ describe("calculateDeficiencies — duration + dose", () => {
     const starter = calculateDeficiencies(baseIntake);
     const high = calculateDeficiencies({ ...baseIntake, dose: "high" });
     expect(high.overallScore).toBeGreaterThan(starter.overallScore);
-  });
-
-  it("covers every duration/dose combination without error", () => {
-    for (const duration of durations) {
-      for (const dose of doses) {
-        const profile = calculateDeficiencies({
-          ...baseIntake,
-          duration,
-          dose,
-        });
-        expect(profile.overallScore).toBeGreaterThanOrEqual(0);
-      }
-    }
   });
 });
 
@@ -196,7 +280,6 @@ describe("calculateDeficiencies — symptom signals", () => {
       symptoms: ["fatigue", "hairloss"],
     });
     const none = calculateDeficiencies({ ...baseIntake, symptoms: ["none"] });
-    // Iron: fatigue +20, hairloss +15 ⇒ +35
     expect(profile.iron - none.iron).toBe(35);
   });
 });
@@ -218,15 +301,35 @@ describe("calculateDeficiencies — drug modifier", () => {
   });
 });
 
+describe("calculateProteinTargetG", () => {
+  it("uses 1.2 g/kg as baseline for moderate activity", () => {
+    const target = calculateProteinTargetG(180, "moderate", "0-3", "starter");
+    const kg = 180 / 2.2046;
+    expect(target).toBe(Math.round(kg * 1.2));
+  });
+
+  it("bumps to 1.4 g/kg for active users", () => {
+    const target = calculateProteinTargetG(180, "active", "0-3", "starter");
+    const kg = 180 / 2.2046;
+    expect(target).toBe(Math.round(kg * 1.4));
+  });
+
+  it("bumps to 1.6 g/kg for long-duration + high-dose", () => {
+    const target = calculateProteinTargetG(180, "moderate", "12+", "high");
+    const kg = 180 / 2.2046;
+    expect(target).toBe(Math.round(kg * 1.6));
+  });
+});
+
 describe("calculateDeficiencies — edge cases", () => {
-  it("starter dose at 0-3 months omni produces low overall score", () => {
+  it("starter dose at 0-3 months omni produces low-or-moderate overall (fiber pushes it up)", () => {
     const profile = calculateDeficiencies(baseIntake);
-    expect(profile.overallScore).toBeLessThan(40);
-    expect(profile.riskTier).toBe("low");
+    expect(profile.overallScore).toBeLessThan(60);
   });
 
   it("12+ months high dose vegan with all symptoms drives high tier", () => {
     const profile = calculateDeficiencies({
+      ...baseIntake,
       drug: "tirz",
       duration: "12+",
       dose: "high",
@@ -242,6 +345,11 @@ describe("calculateDeficiencies — edge cases", () => {
     const none = calculateDeficiencies({ ...baseIntake, symptoms: ["none"] });
     expect(empty).toEqual(none);
   });
+
+  it("dailyProteinTargetG is included in the profile output", () => {
+    const profile = calculateDeficiencies(baseIntake);
+    expect(profile.dailyProteinTargetG).toBeGreaterThan(0);
+  });
 });
 
 describe("supplement-data — SAFETY: potassium is food-only", () => {
@@ -250,14 +358,16 @@ describe("supplement-data — SAFETY: potassium is food-only", () => {
       for (const duration of durations) {
         for (const dose of doses) {
           for (const diet of diets) {
-            const profile = calculateDeficiencies({
+            const intake: IntakeData = {
+              ...baseIntake,
               drug,
               duration,
               dose,
               diet,
               symptoms,
-            });
-            const recs = getSupplementRecommendations(profile);
+            };
+            const profile = calculateDeficiencies(intake);
+            const recs = getSupplementRecommendations(profile, intake);
             const potassium = recs.find((r) => r.deficiencyKey === "potassium");
             expect(potassium).toBeDefined();
             expect(potassium?.foodOnly).toBe(true);
@@ -273,14 +383,16 @@ describe("supplement-data — SAFETY: potassium is food-only", () => {
   });
 
   it("no non-potassium recommendation is marked foodOnly", () => {
-    const profile = calculateDeficiencies({
+    const intake: IntakeData = {
+      ...baseIntake,
       drug: "tirz",
       duration: "12+",
       dose: "high",
       diet: "vegan",
       symptoms: ["fatigue", "muscle"],
-    });
-    const recs = getSupplementRecommendations(profile);
+    };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
     for (const r of recs) {
       if (r.deficiencyKey !== "potassium") {
         expect(r.foodOnly).toBeFalsy();
@@ -289,29 +401,79 @@ describe("supplement-data — SAFETY: potassium is food-only", () => {
   });
 });
 
+describe("supplement-data — quantitative targets", () => {
+  it("returns protein daily target matching profile.dailyProteinTargetG", () => {
+    const intake: IntakeData = {
+      ...baseIntake,
+      duration: "6-12",
+      dose: "moderate",
+      symptoms: ["muscle"],
+    };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
+    const protein = recs.find((r) => r.deficiencyKey === "protein");
+    expect(protein?.dailyTargetAmount).toContain(
+      `${profile.dailyProteinTargetG} g/day`,
+    );
+  });
+
+  it("iron target is 18 mg for pre-menopausal women, 8 mg otherwise", () => {
+    const female: IntakeData = {
+      ...baseIntake,
+      sex: "female",
+      ageRange: "35-49",
+      duration: "12+",
+      dose: "high",
+      symptoms: ["fatigue", "hairloss"],
+    };
+    const male: IntakeData = {
+      ...baseIntake,
+      sex: "male",
+      ageRange: "35-49",
+      duration: "12+",
+      dose: "high",
+      symptoms: ["fatigue", "hairloss"],
+    };
+    const fp = calculateDeficiencies(female);
+    const mp = calculateDeficiencies(male);
+    const femaleIron = getSupplementRecommendations(fp, female).find(
+      (r) => r.deficiencyKey === "iron",
+    );
+    const maleIron = getSupplementRecommendations(mp, male).find(
+      (r) => r.deficiencyKey === "iron",
+    );
+    expect(femaleIron?.dailyTargetAmount).toContain("18 mg");
+    expect(maleIron?.dailyTargetAmount).toContain("8 mg");
+  });
+});
+
 describe("supplement-data — priority + threshold logic", () => {
   it("returns critical priority once protein score >= 65", () => {
-    const high = calculateDeficiencies({
+    const intake: IntakeData = {
+      ...baseIntake,
       drug: "tirz",
       duration: "12+",
       dose: "high",
       diet: "omni",
       symptoms: ["muscle", "hairloss"],
-    });
-    const recs = getSupplementRecommendations(high);
+    };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
     const protein = recs.find((r) => r.deficiencyKey === "protein");
     expect(protein?.priority).toBe("critical");
   });
 
   it("sorts critical → high → support", () => {
-    const profile = calculateDeficiencies({
+    const intake: IntakeData = {
+      ...baseIntake,
       drug: "tirz",
       duration: "12+",
       dose: "high",
       diet: "vegan",
       symptoms: ["fatigue", "hairloss", "muscle", "brainfog"],
-    });
-    const recs = getSupplementRecommendations(profile);
+    };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
     const rank = { critical: 0, high: 1, support: 2 } as const;
     for (let i = 1; i < recs.length; i++) {
       expect(rank[recs[i].priority]).toBeGreaterThanOrEqual(
@@ -322,9 +484,22 @@ describe("supplement-data — priority + threshold logic", () => {
 
   it("low-risk profile still returns at least potassium food-only", () => {
     const profile = calculateDeficiencies(baseIntake);
-    const recs = getSupplementRecommendations(profile);
+    const recs = getSupplementRecommendations(profile, baseIntake);
     expect(recs.length).toBeGreaterThanOrEqual(1);
     expect(recs.some((r) => r.deficiencyKey === "potassium")).toBe(true);
+  });
+
+  it("includes fiber recommendation when score >= threshold", () => {
+    const intake: IntakeData = {
+      ...baseIntake,
+      duration: "6-12",
+      dose: "moderate",
+      symptoms: ["constipation"],
+    };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
+    const fiber = recs.find((r) => r.deficiencyKey === "fiber");
+    expect(fiber).toBeDefined();
   });
 });
 
@@ -345,8 +520,6 @@ describe("meal-data — diet adaptation", () => {
     const intake: IntakeData = { ...baseIntake, diet: "vegan" };
     const profile = calculateDeficiencies(intake);
     const plan = getMealPlan(intake, profile);
-    // Animal-source words that should never appear in a vegan meal name.
-    // Excludes "yogurt" / "cheese" since plant variants exist (e.g. soy yogurt).
     const forbidden = [
       "chicken",
       "beef",
@@ -389,3 +562,73 @@ describe("meal-data — diet adaptation", () => {
     }
   });
 });
+
+describe("injection-cycle — phase mapping", () => {
+  it("days 0-1 are peak", () => {
+    expect(getCyclePhase(0)).toBe("peak");
+    expect(getCyclePhase(1)).toBe("peak");
+  });
+
+  it("days 2-4 are plateau", () => {
+    expect(getCyclePhase(2)).toBe("plateau");
+    expect(getCyclePhase(3)).toBe("plateau");
+    expect(getCyclePhase(4)).toBe("plateau");
+  });
+
+  it("days 5-6 are trough", () => {
+    expect(getCyclePhase(5)).toBe("trough");
+    expect(getCyclePhase(6)).toBe("trough");
+  });
+
+  it("getCycleAdvice returns peak guidance on injection day", () => {
+    const profile = calculateDeficiencies(baseIntake);
+    // Mon = injection day; pick a Monday to evaluate.
+    const monday = new Date("2026-05-18T10:00:00Z"); // 2026-05-18 is a Monday
+    const advice = getCycleAdvice("mon", "morning", profile, monday);
+    expect(advice.phase).toBe("peak");
+    expect(advice.actions.some((a) => a.toLowerCase().includes("liquid"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("gi-protocol", () => {
+  it("inactive when no nausea or constipation", () => {
+    const protocol = getGIProtocol(["fatigue", "hairloss"]);
+    expect(protocol.active).toBe(false);
+    expect(protocol.priorityRecommendations).toHaveLength(0);
+  });
+
+  it("activates and pauses iron when nausea is present", () => {
+    const protocol = getGIProtocol(["nausea"]);
+    expect(protocol.active).toBe(true);
+    expect(protocol.pauseSupplements).toContain("iron");
+    expect(protocol.proteinForm).toBe("liquid-only");
+  });
+
+  it("recommends resistant dextrin fiber when constipation is present", () => {
+    const protocol = getGIProtocol(["constipation"]);
+    expect(protocol.active).toBe(true);
+    expect(
+      protocol.priorityRecommendations.some((r) =>
+        r.toLowerCase().includes("resistant dextrin"),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("safety-alerts", () => {
+  it("warns against thermogenics when fatigue is reported", () => {
+    const alerts = getSafetyAlerts({ ...baseIntake, symptoms: ["fatigue"] });
+    expect(alerts.some((a) => a.id === "no-thermogenics")).toBe(true);
+  });
+
+  it("flags calcium/iron stacking as a baseline info alert", () => {
+    const alerts = getSafetyAlerts(baseIntake);
+    expect(alerts.some((a) => a.id === "no-stacked-calcium-iron")).toBe(true);
+  });
+});
+
+void sexes;
+void ages;
+void activities;

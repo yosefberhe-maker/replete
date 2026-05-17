@@ -27,6 +27,12 @@ async function main(): Promise<void> {
     dose: "moderate",
     diet: "omni",
     symptoms: ["fatigue", "hairloss"],
+    sex: "female",
+    ageRange: "35-49",
+    activityLevel: "moderate",
+    weightLbs: 175,
+    injectionDay: "mon",
+    injectionTiming: "morning",
   };
   const profile = calculateDeficiencies(intake);
   const tpl = welcomeEmail(profile, intake);

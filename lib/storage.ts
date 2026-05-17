@@ -1,6 +1,12 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { DeficiencyProfile, IntakeData } from "@/types";
+import type {
+  DeficiencyProfile,
+  Drug,
+  Duration,
+  IntakeData,
+  SupplementRecommendation,
+} from "@/types";
 
 /**
  * Tiny JSON-file store for MVP. Each entry is appended; reads parse the
@@ -11,6 +17,25 @@ import type { DeficiencyProfile, IntakeData } from "@/types";
 const DATA_DIR = path.join(process.cwd(), "data");
 const WAITLIST_PATH = path.join(DATA_DIR, "waitlist.json");
 export const REDDIT_POSTS_PATH = path.join(DATA_DIR, "reddit-posts.json");
+const SHARED_PROFILES_PATH = path.join(DATA_DIR, "shared-profiles.json");
+
+export interface SharedProfile {
+  code: string;
+  createdAt: string;
+  drug: Drug;
+  duration: Duration;
+  diet: IntakeData["diet"];
+  dose: IntakeData["dose"];
+  overallScore: number;
+  riskTier: DeficiencyProfile["riskTier"];
+  topDeficiencies: Array<{ key: string; label: string; score: number }>;
+  supplements: Array<
+    Pick<
+      SupplementRecommendation,
+      "id" | "name" | "dose" | "priority" | "icon" | "deficiencyKey"
+    >
+  >;
+}
 
 export interface WaitlistEntry {
   email: string;
@@ -68,4 +93,23 @@ export async function appendRedditPost<T>(post: T): Promise<number> {
   list.push(post);
   await writeJsonArray(REDDIT_POSTS_PATH, list);
   return list.length;
+}
+
+export async function readSharedProfiles(): Promise<SharedProfile[]> {
+  return readJsonArray<SharedProfile>(SHARED_PROFILES_PATH);
+}
+
+export async function findSharedProfile(
+  code: string,
+): Promise<SharedProfile | null> {
+  const all = await readSharedProfiles();
+  return all.find((p) => p.code === code) ?? null;
+}
+
+export async function appendSharedProfile(
+  profile: SharedProfile,
+): Promise<void> {
+  const list = await readSharedProfiles();
+  list.push(profile);
+  await writeJsonArray(SHARED_PROFILES_PATH, list);
 }

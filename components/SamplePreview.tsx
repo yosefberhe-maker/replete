@@ -10,10 +10,12 @@ const SAMPLE_PROFILE: DeficiencyProfile = {
   magnesium: 65,
   zinc: 58,
   vitaminD: 52,
-  choline: 48,
+  choline: 60,
   potassium: 43,
-  overallScore: 61,
-  riskTier: "moderate",
+  fiber: 88,
+  overallScore: 65,
+  riskTier: "high",
+  dailyProteinTargetG: 124,
 };
 
 export default function SamplePreview() {

@@ -1,13 +1,18 @@
 import type {
+  ActivityLevel,
+  AgeRange,
+  DayOfWeek,
   Diet,
   Dose,
   Drug,
   Duration,
   IntakeData,
+  InjectionTiming,
+  Sex,
   Symptom,
 } from "@/types";
 
-export type StepKey = keyof IntakeData;
+export type StepKey = keyof IntakeData | "injection";
 
 export interface StepOption<T extends string> {
   value: T;
@@ -39,6 +44,36 @@ export type StepConfig =
       options: StepOption<Dose>[];
     }
   | {
+      key: "weightLbs";
+      title: string;
+      subtitle: string;
+      type: "numeric";
+      placeholder: string;
+      min: number;
+      max: number;
+    }
+  | {
+      key: "sex";
+      title: string;
+      subtitle: string;
+      type: "single";
+      options: StepOption<Sex>[];
+    }
+  | {
+      key: "ageRange";
+      title: string;
+      subtitle: string;
+      type: "single";
+      options: StepOption<AgeRange>[];
+    }
+  | {
+      key: "activityLevel";
+      title: string;
+      subtitle: string;
+      type: "single";
+      options: StepOption<ActivityLevel>[];
+    }
+  | {
       key: "diet";
       title: string;
       subtitle: string;
@@ -51,13 +86,22 @@ export type StepConfig =
       subtitle: string;
       type: "multi";
       options: StepOption<Symptom>[];
+    }
+  | {
+      key: "injection";
+      title: string;
+      subtitle: string;
+      type: "compound";
+      days: StepOption<DayOfWeek>[];
+      timings: StepOption<InjectionTiming>[];
     };
 
 export const STEPS: StepConfig[] = [
   {
     key: "drug",
     title: "Which GLP-1 are you on?",
-    subtitle: "Different drugs suppress appetite differently. We adjust accordingly.",
+    subtitle:
+      "Different drugs suppress appetite differently. We adjust accordingly.",
     type: "single",
     options: [
       {
@@ -110,7 +154,8 @@ export const STEPS: StepConfig[] = [
   {
     key: "dose",
     title: "What's your current dose?",
-    subtitle: "Higher doses suppress appetite more — and increase the nutrient deficit.",
+    subtitle:
+      "Higher doses suppress appetite more — and increase the nutrient deficit.",
     type: "single",
     options: [
       {
@@ -127,6 +172,67 @@ export const STEPS: StepConfig[] = [
         value: "high",
         title: "Full / high dose",
         subtitle: "2–2.4 mg semaglutide · 15 mg tirzepatide",
+      },
+    ],
+  },
+  {
+    key: "weightLbs",
+    title: "What's your current weight?",
+    subtitle:
+      "Protein needs scale with body weight. We use this to calculate your daily target in grams.",
+    type: "numeric",
+    placeholder: "e.g. 175",
+    min: 80,
+    max: 600,
+  },
+  {
+    key: "sex",
+    title: "Your sex assigned at birth",
+    subtitle:
+      "Iron, choline, and several other targets differ by sex. Used for clinical accuracy only.",
+    type: "single",
+    options: [
+      { value: "female", title: "Female", subtitle: "Higher iron needs if pre-menopausal" },
+      { value: "male", title: "Male" },
+    ],
+  },
+  {
+    key: "ageRange",
+    title: "Your age range",
+    subtitle: "Affects iron requirements and post-menopausal status.",
+    type: "single",
+    options: [
+      { value: "18-34", title: "18–34" },
+      { value: "35-49", title: "35–49" },
+      { value: "50-64", title: "50–64" },
+      { value: "65+", title: "65+" },
+    ],
+  },
+  {
+    key: "activityLevel",
+    title: "Activity level",
+    subtitle: "Active users need more protein to defend lean mass on a GLP-1.",
+    type: "single",
+    options: [
+      {
+        value: "sedentary",
+        title: "Sedentary",
+        subtitle: "Desk-bound, light walking",
+      },
+      {
+        value: "light",
+        title: "Light",
+        subtitle: "1–2 short workouts or walks per week",
+      },
+      {
+        value: "moderate",
+        title: "Moderate",
+        subtitle: "3–4 workouts per week, mixed cardio and strength",
+      },
+      {
+        value: "active",
+        title: "Active",
+        subtitle: "5+ workouts per week or physically demanding job",
       },
     ],
   },
@@ -153,7 +259,8 @@ export const STEPS: StepConfig[] = [
   {
     key: "symptoms",
     title: "Any symptoms you've noticed?",
-    subtitle: "Select all that apply. We use these as direct diagnostic signals.",
+    subtitle:
+      "Select all that apply. We use these as direct diagnostic signals.",
     type: "multi",
     options: [
       {
@@ -178,14 +285,39 @@ export const STEPS: StepConfig[] = [
       },
       {
         value: "nausea",
-        title: "Nausea or GI discomfort",
-        subtitle: "Electrolyte signal — magnesium, potassium",
+        title: "Nausea or upper-GI discomfort",
+        subtitle: "Triggers our GI countermeasure protocol",
+      },
+      {
+        value: "constipation",
+        title: "Constipation",
+        subtitle: "Fiber, magnesium form, and hydration matter most",
       },
       {
         value: "none",
         title: "None of these yet",
         subtitle: "You're being proactive. Good.",
       },
+    ],
+  },
+  {
+    key: "injection",
+    title: "When do you inject?",
+    subtitle:
+      "Used to sync your daily plan to the GLP-1 pharmacokinetic curve — peak suppression hits 24–48 hr post-injection.",
+    type: "compound",
+    days: [
+      { value: "mon", title: "Mon" },
+      { value: "tue", title: "Tue" },
+      { value: "wed", title: "Wed" },
+      { value: "thu", title: "Thu" },
+      { value: "fri", title: "Fri" },
+      { value: "sat", title: "Sat" },
+      { value: "sun", title: "Sun" },
+    ],
+    timings: [
+      { value: "morning", title: "Morning" },
+      { value: "evening", title: "Evening" },
     ],
   },
 ];

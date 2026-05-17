@@ -1,4 +1,6 @@
 import type {
+  ActivityLevel,
+  AgeRange,
   DeficiencyProfile,
   Diet,
   Dose,
@@ -7,14 +9,18 @@ import type {
   IntakeData,
   NutrientKey,
   RiskTier,
+  Sex,
   Symptom,
 } from "@/types";
 
 /**
  * Replete Deficiency Engine
  *
- * Core IP. Maps a 5-question intake to per-nutrient risk scores (0-95) and
- * an overall risk tier. Algorithm constants come straight from CLAUDE.md.
+ * Core IP. Maps intake to per-nutrient risk scores (0-95), an overall risk
+ * tier, and quantitative daily targets. Algorithm constants and clinical
+ * priors are calibrated against the 2025-2026 GLP-1 nutrition literature
+ * (Butsch et al. 2025, Urbina et al. Clinical Obesity, Obesity Pillars 2025).
+ *
  * Do not loosen typing or short-circuit branches without updating the tests.
  */
 
@@ -27,6 +33,7 @@ const NUTRIENTS: NutrientKey[] = [
   "vitaminD",
   "choline",
   "potassium",
+  "fiber",
 ];
 
 const BASE: Record<NutrientKey, number> = {
@@ -36,8 +43,9 @@ const BASE: Record<NutrientKey, number> = {
   magnesium: 35,
   zinc: 20,
   vitaminD: 30,
-  choline: 25,
+  choline: 55,
   potassium: 20,
+  fiber: 70,
 };
 
 const DURATION_BOOST: Record<Duration, number> = {
@@ -58,7 +66,7 @@ const DIET_MOD: Record<Diet, Partial<Record<NutrientKey, number>>> = {
   omni: {},
   veg: { b12: 28, iron: 22, zinc: 18, choline: 20 },
   vegan: { b12: 40, iron: 30, zinc: 25, choline: 30, vitaminD: 15 },
-  keto: { magnesium: 20, potassium: 25, vitaminD: 10 },
+  keto: { magnesium: 20, potassium: 25, vitaminD: 10, fiber: 15, choline: 10 },
 };
 
 /** Drug-specific additions. Tirzepatide is a dual agonist → stronger appetite suppression. */
@@ -68,6 +76,18 @@ const DRUG_MOD: Record<Drug, Partial<Record<NutrientKey, number>>> = {
   other: {},
 };
 
+/**
+ * Duration-specific nutrient boosts that go BEYOND the linear duration boost.
+ * Reflects the clinical doubling of vitamin D deficiency at 12+ months
+ * (Butsch et al. 2025: 7.5% at 6 mo → 13.6% at 12 mo, n=461k).
+ */
+const LONG_DURATION_NUTRIENT_BOOST: Partial<
+  Record<Duration, Partial<Record<NutrientKey, number>>>
+> = {
+  "6-12": { vitaminD: 12 },
+  "12+": { vitaminD: 25 },
+};
+
 /** Symptom signal mapping — direct diagnostic signals from the user. */
 const SYMPTOM_MOD: Record<Symptom, Partial<Record<NutrientKey, number>>> = {
   fatigue: { iron: 20, b12: 15, vitaminD: 12 },
@@ -75,6 +95,7 @@ const SYMPTOM_MOD: Record<Symptom, Partial<Record<NutrientKey, number>>> = {
   muscle: { protein: 30, magnesium: 15 },
   brainfog: { choline: 25, b12: 18 },
   nausea: { potassium: 18, magnesium: 12 },
+  constipation: { fiber: 20, magnesium: 10 },
   none: {},
 };
 
@@ -84,6 +105,36 @@ function clamp(value: number): number {
   if (value < 0) return 0;
   if (value > MAX_SCORE) return MAX_SCORE;
   return value;
+}
+
+/**
+ * Pre-menopausal women have higher iron requirements and depletion risk
+ * (menstrual losses, ~18 mg/day RDA vs 8 mg/day for males and post-menopausal women).
+ * Reflected in the base score so iron consistently ranks higher for this cohort.
+ */
+function ironSexAgeBoost(sex: Sex, age: AgeRange): number {
+  if (sex !== "female") return 0;
+  if (age === "18-34" || age === "35-49") return 15;
+  return 0;
+}
+
+/**
+ * Protein target in grams, body-weight scaled per Obesity Pillars 2025
+ * (1.0-1.6+ g/kg). Active users and long-duration high-dose users get bumped.
+ */
+export function calculateProteinTargetG(
+  weightLbs: number,
+  activity: ActivityLevel,
+  duration: Duration,
+  dose: Dose,
+): number {
+  const weightKg = weightLbs / 2.2046;
+  const longDurationHighDose =
+    (duration === "6-12" || duration === "12+") && dose === "high";
+  let factor = 1.2;
+  if (activity === "active") factor = 1.4;
+  if (longDurationHighDose) factor = 1.6;
+  return Math.round(weightKg * factor);
 }
 
 export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
@@ -103,11 +154,20 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
     scores[k as NutrientKey] += v ?? 0;
   }
 
+  const longDurationMod = LONG_DURATION_NUTRIENT_BOOST[intake.duration];
+  if (longDurationMod) {
+    for (const [k, v] of Object.entries(longDurationMod)) {
+      scores[k as NutrientKey] += v ?? 0;
+    }
+  }
+
   for (const symptom of intake.symptoms) {
     for (const [k, v] of Object.entries(SYMPTOM_MOD[symptom])) {
       scores[k as NutrientKey] += v ?? 0;
     }
   }
+
+  scores.iron += ironSexAgeBoost(intake.sex, intake.ageRange);
 
   for (const key of NUTRIENTS) {
     scores[key] = clamp(scores[key]);
@@ -119,6 +179,13 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
 
   const riskTier = getRiskLabel(overallScore).tier;
 
+  const dailyProteinTargetG = calculateProteinTargetG(
+    intake.weightLbs,
+    intake.activityLevel,
+    intake.duration,
+    intake.dose,
+  );
+
   return {
     protein: scores.protein,
     b12: scores.b12,
@@ -128,8 +195,10 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
     vitaminD: scores.vitaminD,
     choline: scores.choline,
     potassium: scores.potassium,
+    fiber: scores.fiber,
     overallScore,
     riskTier,
+    dailyProteinTargetG,
   };
 }
 
@@ -151,6 +220,7 @@ export const NUTRIENT_LABELS: Record<NutrientKey, string> = {
   vitaminD: "Vitamin D",
   choline: "Choline",
   potassium: "Potassium",
+  fiber: "Fiber",
 };
 
 export const NUTRIENT_KEYS = NUTRIENTS;

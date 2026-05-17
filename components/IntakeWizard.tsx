@@ -5,16 +5,21 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STEPS } from "@/lib/intake-steps";
+import { STEPS, type StepConfig } from "@/lib/intake-steps";
 import { calculateDeficiencies } from "@/lib/deficiency-engine";
 import { getSupplementRecommendations } from "@/lib/supplement-data";
 import { getMealPlan } from "@/lib/meal-data";
+import { getCycleAdvice } from "@/lib/injection-cycle";
+import { getGIProtocol } from "@/lib/gi-protocol";
+import { getSafetyAlerts } from "@/lib/safety-alerts";
 import type {
   CompleteProfile,
+  DayOfWeek,
   Diet,
   Dose,
   Drug,
   Duration,
+  InjectionTiming,
   IntakeData,
   Symptom,
 } from "@/types";
@@ -46,7 +51,6 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       };
     case "toggle-symptom": {
       const current = (state.answers.symptoms ?? []) as Symptom[];
-      // "None" is mutually exclusive with everything else.
       if (action.value === "none") {
         return {
           ...state,
@@ -76,29 +80,42 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-function getStepValue(answers: Answers, key: keyof IntakeData): unknown {
-  return answers[key];
-}
-
-function isStepValid(state: WizardState): boolean {
-  const step = STEPS[state.currentStep];
-  const value = getStepValue(state.answers, step.key);
+function isStepValid(step: StepConfig, answers: Answers): boolean {
   if (step.type === "multi") {
+    const value = answers.symptoms;
     return Array.isArray(value) && value.length > 0;
   }
+  if (step.type === "numeric") {
+    const value = answers[step.key];
+    return typeof value === "number" && value >= step.min && value <= step.max;
+  }
+  if (step.type === "compound") {
+    return !!answers.injectionDay && !!answers.injectionTiming;
+  }
+  const value = answers[step.key];
   return typeof value === "string" && value.length > 0;
 }
 
 function persistAndAnalyze(answers: Answers): CompleteProfile {
   const intake = answers as IntakeData;
   const profile = calculateDeficiencies(intake);
-  const supplements = getSupplementRecommendations(profile);
+  const supplements = getSupplementRecommendations(profile, intake);
   const mealPlan = getMealPlan(intake, profile);
+  const cycle = getCycleAdvice(
+    intake.injectionDay,
+    intake.injectionTiming,
+    profile,
+  );
+  const gi = getGIProtocol(intake.symptoms);
+  const safetyAlerts = getSafetyAlerts(intake);
   const result: CompleteProfile = {
     intake,
     profile,
     supplements,
     mealPlan,
+    cycle,
+    gi,
+    safetyAlerts,
     generatedAt: new Date().toISOString(),
   };
   if (typeof window !== "undefined") {
@@ -118,7 +135,7 @@ export default function IntakeWizard() {
 
   const step = STEPS[state.currentStep];
   const isLast = state.currentStep === STEPS.length - 1;
-  const valid = isStepValid(state);
+  const valid = isStepValid(step, state.answers);
   const progress = ((state.currentStep + 1) / STEPS.length) * 100;
 
   function handleSelect(value: string) {
@@ -126,7 +143,22 @@ export default function IntakeWizard() {
       dispatch({ type: "toggle-symptom", value: value as Symptom });
       return;
     }
+    if (step.type === "single") {
+      dispatch({ type: "set", key: step.key, value });
+    }
+  }
+
+  function handleNumeric(value: number) {
+    if (step.type !== "numeric") return;
     dispatch({ type: "set", key: step.key, value });
+  }
+
+  function handleInjectionDay(value: DayOfWeek) {
+    dispatch({ type: "set", key: "injectionDay", value });
+  }
+
+  function handleInjectionTiming(value: InjectionTiming) {
+    dispatch({ type: "set", key: "injectionTiming", value });
   }
 
   function handleContinue() {
@@ -170,7 +202,7 @@ export default function IntakeWizard() {
 
       <AnimatePresence mode="wait" initial={false} custom={state.direction}>
         <motion.div
-          key={step.key}
+          key={String(step.key)}
           custom={state.direction}
           initial={{ x: state.direction === 1 ? 40 : -40, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -182,29 +214,14 @@ export default function IntakeWizard() {
           </h1>
           <p className="mt-2 text-sm text-sub sm:text-base">{step.subtitle}</p>
 
-          <ul className="mt-6 flex flex-col gap-3">
-            {step.options.map((option) => {
-              const selected =
-                step.type === "multi"
-                  ? Array.isArray(state.answers.symptoms) &&
-                    (state.answers.symptoms as Symptom[]).includes(
-                      option.value as Symptom,
-                    )
-                  : state.answers[step.key] === option.value;
-              return (
-                <li key={option.value}>
-                  <OptionCard
-                    title={option.title}
-                    subtitle={option.subtitle}
-                    badge={option.badge}
-                    selected={selected}
-                    multi={step.type === "multi"}
-                    onClick={() => handleSelect(option.value)}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+          <StepBody
+            step={step}
+            answers={state.answers}
+            onSelect={handleSelect}
+            onNumeric={handleNumeric}
+            onInjectionDay={handleInjectionDay}
+            onInjectionTiming={handleInjectionTiming}
+          />
         </motion.div>
       </AnimatePresence>
 
@@ -224,6 +241,144 @@ export default function IntakeWizard() {
         </button>
       </div>
     </div>
+  );
+}
+
+interface StepBodyProps {
+  step: StepConfig;
+  answers: Answers;
+  onSelect: (value: string) => void;
+  onNumeric: (value: number) => void;
+  onInjectionDay: (value: DayOfWeek) => void;
+  onInjectionTiming: (value: InjectionTiming) => void;
+}
+
+function StepBody({
+  step,
+  answers,
+  onSelect,
+  onNumeric,
+  onInjectionDay,
+  onInjectionTiming,
+}: StepBodyProps) {
+  if (step.type === "numeric") {
+    const raw = answers[step.key];
+    const value = typeof raw === "number" ? raw : "";
+    return (
+      <div className="mt-6">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+            Weight in lbs
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={step.min}
+            max={step.max}
+            placeholder={step.placeholder}
+            value={value}
+            onChange={(e) => {
+              const n = e.target.value === "" ? Number.NaN : Number(e.target.value);
+              if (Number.isFinite(n)) {
+                onNumeric(n);
+              }
+            }}
+            className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-4 text-2xl font-semibold text-text placeholder:text-muted focus:border-green focus:outline-none"
+            autoFocus
+          />
+        </label>
+        <p className="mt-3 text-xs text-muted">
+          Stored only in your browser. Not sent to any server unless you join the waitlist.
+        </p>
+      </div>
+    );
+  }
+
+  if (step.type === "compound") {
+    const selectedDay = answers.injectionDay;
+    const selectedTiming = answers.injectionTiming;
+    return (
+      <div className="mt-6 flex flex-col gap-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+            Day of week
+          </p>
+          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
+            {step.days.map((d) => {
+              const selected = selectedDay === d.value;
+              return (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => onInjectionDay(d.value)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "rounded-lg border px-2 py-3 text-sm font-semibold transition-all",
+                    selected
+                      ? "border-green bg-green/10 text-text ring-1 ring-green/40"
+                      : "border-border bg-card text-sub hover:border-card2 hover:text-text",
+                  )}
+                >
+                  {d.title}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+            Time of day
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {step.timings.map((t) => {
+              const selected = selectedTiming === t.value;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => onInjectionTiming(t.value)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "rounded-lg border px-2 py-3 text-sm font-semibold transition-all",
+                    selected
+                      ? "border-green bg-green/10 text-text ring-1 ring-green/40"
+                      : "border-border bg-card text-sub hover:border-card2 hover:text-text",
+                  )}
+                >
+                  {t.title}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // single + multi share the option-card pattern
+  const options = step.options;
+  return (
+    <ul className="mt-6 flex flex-col gap-3">
+      {options.map((option) => {
+        const selected =
+          step.type === "multi"
+            ? Array.isArray(answers.symptoms) &&
+              (answers.symptoms as Symptom[]).includes(option.value as Symptom)
+            : answers[step.key] === option.value;
+        return (
+          <li key={option.value}>
+            <OptionCard
+              title={option.title}
+              subtitle={option.subtitle}
+              badge={option.badge}
+              selected={selected}
+              multi={step.type === "multi"}
+              onClick={() => onSelect(option.value)}
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

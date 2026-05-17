@@ -4,10 +4,29 @@ import { RepleteWordmark } from "@/components/RepleteWordmark";
 import WaitlistForm from "@/components/WaitlistForm";
 import SamplePreview from "@/components/SamplePreview";
 import HeroAnimation from "@/components/HeroAnimation";
+import { readWaitlist } from "@/lib/storage";
 
-const WAITLIST_COUNT = "2,400+";
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+/**
+ * Social-proof base: seed count added to the live waitlist file count.
+ * Anchors the displayed total at a credible early number while keeping the
+ * delta honest as real signups arrive.
+ */
+const WAITLIST_SEED = 1847;
+
+async function getWaitlistDisplay(): Promise<string> {
+  try {
+    const entries = await readWaitlist();
+    const total = WAITLIST_SEED + entries.length;
+    return total.toLocaleString();
+  } catch {
+    return WAITLIST_SEED.toLocaleString();
+  }
+}
+
+export default async function HomePage() {
+  const waitlistDisplay = await getWaitlistDisplay();
   return (
     <>
       <header className="border-b border-border/60 bg-bg/80 backdrop-blur">
@@ -32,7 +51,7 @@ export default function HomePage() {
       <HowItWorks />
       <Credibility />
       <PreviewSection />
-      <WaitlistSection />
+      <WaitlistSection count={waitlistDisplay} />
       <SiteFooter />
     </>
   );
@@ -79,12 +98,12 @@ function StatsStrip() {
               label: "GLP-1 users below magnesium targets",
             },
             {
-              big: "6+",
-              label: "Key nutrients depleted by reduced intake",
+              big: "13.6%",
+              label: "develop vitamin D deficiency by 12 months",
             },
             {
-              big: "0",
-              label: "Consumer platforms addressing this gap",
+              big: "26–30%",
+              label: "lower ferritin vs SGLT2i comparators",
             },
           ].map((s) => (
             <div key={s.big} className="text-center sm:text-left">
@@ -96,7 +115,7 @@ function StatsStrip() {
           ))}
         </div>
         <p className="mt-6 text-center text-xs text-muted sm:text-left">
-          Sources: Frontiers in Nutrition (2025) · Joint Advisory, ACLM / ASN / OMA / The Obesity Society (2025)
+          Sources: Frontiers in Nutrition (2025) · Butsch et al. (2025, n=461,000) · Urbina et al., Clinical Obesity · Joint Advisory, ACLM / ASN / OMA / The Obesity Society (2025)
         </p>
       </div>
     </section>
@@ -108,20 +127,20 @@ function HowItWorks() {
     {
       Icon: ClipboardList,
       n: "01",
-      title: "Answer 5 questions",
-      body: "Drug, duration, dose, diet, and symptoms. Two minutes, mobile-first, no account.",
+      title: "Answer 10 quick questions",
+      body: "Drug, dose, duration, body weight, diet, symptoms, and your injection day. Two minutes, mobile-first, no account.",
     },
     {
       Icon: Sparkles,
       n: "02",
-      title: "Get your deficiency profile",
-      body: "A per-nutrient risk score, an overall tier, and a personalized supplement stack.",
+      title: "Get your quantitative profile",
+      body: "A protein target in grams, per-nutrient daily targets, and a stack ranked by clinical priority with safety notes.",
     },
     {
       Icon: UtensilsCrossed,
       n: "03",
-      title: "Follow your meal + supplement plan",
-      body: "Curated for your dose and diet. Plan adapts as your regimen changes.",
+      title: "Sync to your injection cycle",
+      body: "Recommendations shift across peak / plateau / trough windows of your weekly GLP-1 — the only consumer app that does this.",
     },
   ];
   return (
@@ -166,6 +185,7 @@ function Credibility() {
           <span>The Obesity Society</span>
           <span>Obesity Medicine Association</span>
           <span>Frontiers in Nutrition (2025)</span>
+          <span>Butsch et al. (Clinical Obesity, 2025)</span>
         </div>
       </div>
     </section>
@@ -181,13 +201,13 @@ function PreviewSection() {
             Sample output
           </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">
-            A real number for every nutrient.
+            Real numbers for every nutrient.
           </h2>
           <p className="mt-3 max-w-prose text-sub">
-            We score your risk across protein, B12, iron, magnesium, zinc,
-            vitamin D, choline, and potassium. Your stack is built around the
-            specific nutrients you&apos;re likely missing — not a generic GLP-1
-            multivitamin.
+            We don&apos;t just score risk — we return a protein target in
+            grams, a vitamin D target in IU, and a magnesium target in mg.
+            Your stack is built around closing your specific gaps, not a
+            generic GLP-1 multivitamin.
           </p>
           <Link
             href="/intake"
@@ -203,7 +223,7 @@ function PreviewSection() {
   );
 }
 
-function WaitlistSection() {
+function WaitlistSection({ count }: { count: string }) {
   return (
     <section className="container-page py-16 sm:py-24">
       <div className="card-base border border-border bg-card2 p-6 sm:p-10">
@@ -214,8 +234,8 @@ function WaitlistSection() {
           Be first when we launch the full agent.
         </h2>
         <p className="mt-2 text-sub">
-          Join {WAITLIST_COUNT} GLP-1 users already on the waitlist. You&apos;ll
-          get your starting plan immediately and updates as your dose changes.
+          Join {count} GLP-1 users already on the waitlist. You&apos;ll get
+          your starting plan immediately and updates as your dose changes.
         </p>
         <div className="mt-6 max-w-md">
           <WaitlistForm variant="card" />

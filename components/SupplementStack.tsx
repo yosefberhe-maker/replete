@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowUp, Check, Leaf } from "lucide-react";
+import { AlertTriangle, ArrowUp, Check, Leaf, ShieldAlert } from "lucide-react";
 import type { SupplementPriority, SupplementRecommendation } from "@/types";
 
 interface SupplementStackProps {
@@ -99,11 +99,42 @@ function SupplementCard({
         </div>
       </header>
 
+      {(supplement.dailyTargetAmount || supplement.currentEstimatedIntake) ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-border bg-bg/60 p-3 text-xs">
+          <div>
+            <p className="font-semibold uppercase tracking-widest text-muted">
+              Daily target
+            </p>
+            <p className="mt-1 text-sm font-semibold text-text">
+              {supplement.dailyTargetAmount ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase tracking-widest text-muted">
+              Typical on GLP-1
+            </p>
+            <p className="mt-1 text-sm text-sub">
+              {supplement.currentEstimatedIntake ?? "—"}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <p className="mt-3 text-sm text-sub">
         <span className="font-semibold text-text">Form: </span>
         {supplement.form}
       </p>
       <p className="mt-2 text-sm text-sub">{supplement.why}</p>
+
+      {supplement.safetyNote ? (
+        <p className="mt-3 flex items-start gap-2 rounded-md border border-blue/30 bg-blue/5 p-3 text-xs text-text/90">
+          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-blue" />
+          <span>
+            <span className="font-semibold text-blue">Safety: </span>
+            {supplement.safetyNote}
+          </span>
+        </p>
+      ) : null}
 
       {supplement.caution ? (
         <p className="mt-3 rounded-md border border-amber/40 bg-amber/10 p-3 text-xs text-amber">

@@ -1,5 +1,6 @@
 import type {
   DeficiencyProfile,
+  IntakeData,
   NutrientKey,
   SupplementPriority,
   SupplementRecommendation,
@@ -13,6 +14,10 @@ import type {
  * can cause hyperkalemia → cardiac arrhythmia. The user is directed to food
  * sources only. This rule is enforced both in the data and in tests; do not
  * remove without explicit clinical sign-off.
+ *
+ * All `why` strings cite 2025-2026 clinical sources; the supplement engine
+ * also returns quantitative daily targets, estimated current intake on a
+ * GLP-1, and safety notes for drug interactions and unsafe stacking.
  */
 
 type Threshold = {
@@ -24,8 +29,15 @@ type Threshold = {
   high: number;
 };
 
-type SupplementDef = Omit<SupplementRecommendation, "priority"> & {
+type SupplementDef = Omit<
+  SupplementRecommendation,
+  "priority" | "dailyTargetAmount" | "currentEstimatedIntake"
+> & {
   thresholds: Threshold;
+  resolveTarget?: (
+    intake: IntakeData,
+    profile: DeficiencyProfile,
+  ) => { dailyTargetAmount: string; currentEstimatedIntake: string };
 };
 
 const PRIORITY_RANK: Record<SupplementPriority, number> = {
@@ -39,12 +51,17 @@ const SUPPLEMENTS: SupplementDef[] = [
     id: "protein",
     name: "Protein blend",
     deficiencyKey: "protein",
-    dose: "25–35 g per day",
-    timing: "Within 30 min of waking; second serving post-workout or with dinner",
+    dose: "25–35 g per serving · 2 servings/day typical",
+    timing:
+      "Within 30 min of waking; second serving post-workout or with dinner",
     form: "Whey isolate, or pea + rice blend for plant-based",
-    why: "GLP-1s suppress appetite by ~30–40%. Lean mass loss is the most documented downside — protein intake has to stay constant even as calories drop.",
+    why: "GLP-1 users average 45–65 g/day vs the 1.0–1.6 g/kg target (Obesity Pillars, 2025). Up to 20–50% of weight lost on GLP-1s can come from lean mass without targeted protein.",
     icon: "🥩",
     thresholds: { show: 40, high: 50, critical: 65 },
+    resolveTarget: (_intake, profile) => ({
+      dailyTargetAmount: `${profile.dailyProteinTargetG} g/day`,
+      currentEstimatedIntake: "~45–65 g/day on GLP-1 average",
+    }),
   },
   {
     id: "magnesium",
@@ -52,10 +69,16 @@ const SUPPLEMENTS: SupplementDef[] = [
     deficiencyKey: "magnesium",
     dose: "200–400 mg",
     timing: "30 min before bed",
-    form: "Glycinate (not oxide — poor absorption, GI distress)",
-    why: "Magnesium intake collapses with smaller meals. Deficiency drives muscle cramps, poor sleep, and nausea — three top GLP-1 complaints.",
+    form: "Glycinate (not oxide — poor absorption, worsens existing GLP-1 motility issues)",
+    why: "Average GLP-1 user intake is 266 mg/day vs the 400–420 mg RDA. Magnesium glycinate is critical for GLP-1 users — oxide forms drive GI distress in an already slow-emptying stomach.",
     icon: "🌙",
     thresholds: { show: 35, high: 60 },
+    resolveTarget: () => ({
+      dailyTargetAmount: "400 mg/day",
+      currentEstimatedIntake: "~266 mg/day (GLP-1 average)",
+    }),
+    safetyNote:
+      "Avoid oxide form — poor absorption and irritates GI tract. Glycinate or citrate only.",
   },
   {
     id: "b12",
@@ -64,9 +87,13 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "1000 mcg",
     timing: "Morning, away from coffee",
     form: "Methylcobalamin sublingual",
-    why: "Reduced food intake + slowed gastric emptying lower B12 absorption. Deficiency presents as fatigue and brain fog — both common at 6+ months.",
+    why: "Reduced food intake plus slowed gastric emptying lowers B12 absorption. Methylcobalamin sublingual bypasses gastric uptake — relevant for any GLP-1 user past 6 months.",
     icon: "⚡",
     thresholds: { show: 35, high: 50, critical: 65 },
+    resolveTarget: () => ({
+      dailyTargetAmount: "2.4 mcg/day RDA (1000 mcg supplemented for absorption)",
+      currentEstimatedIntake: "Variable — diet-dependent",
+    }),
   },
   {
     id: "vitaminD",
@@ -75,9 +102,16 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "2000–4000 IU D3 + 100 mcg K2 (MK-7)",
     timing: "With your largest fat-containing meal",
     form: "D3 (cholecalciferol) with K2 for bone/cardiovascular co-factor",
-    why: "Lower food volume = less ambient D intake. K2 directs calcium away from arteries to bone — important when supplementing higher doses of D.",
+    why: "13.6% of long-term GLP-1 users develop vitamin D deficiency by 12 months vs 7.5% at 6 months (Butsch et al., 2025, n=461,000). Reduced dietary volume and sun-seeking behavior both contribute.",
     icon: "☀️",
     thresholds: { show: 30, high: 55 },
+    resolveTarget: (_intake, profile) => ({
+      dailyTargetAmount:
+        profile.vitaminD >= 65 ? "4000 IU/day" : "2000 IU/day",
+      currentEstimatedIntake: "~400–600 IU/day from diet (US average)",
+    }),
+    safetyNote:
+      "If supplementing >2000 IU D3, pair with K2 (MK-7) and adequate dietary calcium (~1000 mg). Don't co-dose calcium with iron — they compete for absorption.",
   },
   {
     id: "zinc",
@@ -86,9 +120,13 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "25–50 mg",
     timing: "With food (never on empty stomach — nausea)",
     form: "Picolinate or bisglycinate",
-    why: "Zinc is the single biggest lever on hair retention. Deficiency also impairs immune function and taste — both reported by long-term GLP-1 users.",
+    why: "Zinc is the single biggest mineral lever on hair retention. Deficiency also impairs immune function and taste — both reported by long-term GLP-1 users.",
     icon: "🛡",
     thresholds: { show: 40, high: 55, critical: 65 },
+    resolveTarget: () => ({
+      dailyTargetAmount: "8–11 mg/day RDA · 25 mg supplemented",
+      currentEstimatedIntake: "Below RDA on reduced-volume diets",
+    }),
     caution:
       "Do not exceed 50 mg/day long-term — high zinc displaces copper. Take with a meal.",
   },
@@ -97,13 +135,26 @@ const SUPPLEMENTS: SupplementDef[] = [
     name: "Iron bisglycinate",
     deficiencyKey: "iron",
     dose: "18–36 mg",
-    timing: "Morning, with vitamin C; away from coffee, tea, calcium",
+    timing: "Morning, with vitamin C; away from coffee, tea, calcium, thyroid meds",
     form: "Ferrous bisglycinate (gentle on GI vs. ferrous sulfate)",
-    why: "Iron requires adequate intake of red meat, beans, or fortified grains — all of which drop sharply on GLP-1s. Low iron → fatigue + hair thinning.",
+    why: "GLP-1 users show 26–30% lower serum ferritin vs matched SGLT2-inhibitor controls. Menstruating women face compounded depletion. Excess iron is hepatotoxic — confirm ferritin before supplementing.",
     icon: "🩸",
     thresholds: { show: 40, high: 50, critical: 65 },
+    resolveTarget: (intake) => {
+      const preMenopausalFemale =
+        intake.sex === "female" &&
+        (intake.ageRange === "18-34" || intake.ageRange === "35-49");
+      return {
+        dailyTargetAmount: preMenopausalFemale ? "18 mg/day" : "8 mg/day",
+        currentEstimatedIntake: preMenopausalFemale
+          ? "Most pre-menopausal women on GLP-1 fall short"
+          : "Below RDI on reduced-volume diets",
+      };
+    },
     caution:
       "If you have a known iron disorder (hemochromatosis) or have not been tested, get a ferritin lab before supplementing.",
+    safetyNote:
+      "Do not take within 2 hours of thyroid medication, coffee, tea, or calcium — all impair absorption. Confirm ferritin before starting.",
   },
   {
     id: "choline",
@@ -112,30 +163,50 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "250–500 mg",
     timing: "Morning",
     form: "Citicoline (CDP-Choline) — more bioavailable than choline bitartrate",
-    why: "Choline is the most underrated GLP-1 deficiency. Eggs, liver, and beef are the top sources — exactly the foods people eat less of. Deficiency drives brain fog.",
+    why: "Average GLP-1 user intake is 305 mg/day vs 425–550 mg adequate intake. Choline supports hepatic fat metabolism — relevant because rapid GLP-1 weight loss can trigger transient NAFLD.",
     icon: "🧠",
     thresholds: { show: 40, high: 60 },
+    resolveTarget: (intake) => ({
+      dailyTargetAmount:
+        intake.sex === "female" ? "425 mg/day AI" : "550 mg/day AI",
+      currentEstimatedIntake: "~305 mg/day (GLP-1 average)",
+    }),
+  },
+  {
+    id: "fiber",
+    name: "Resistant dextrin fiber",
+    deficiencyKey: "fiber",
+    dose: "Start 5 g/day, titrate to 15–25 g over 4 weeks",
+    timing: "Split into 2 doses with meals; add 250 mL extra water per serving",
+    form: "Resistant dextrin (e.g. Benefiber) — low-osmolality, GI-tolerable for slow gastric emptying",
+    why: "GLP-1 users average 14.5 g/day fiber vs the 25–38 g RDA — a near-universal gap. Critical for managing constipation, which compounds on slow-emptying gastric motility.",
+    icon: "🌾",
+    thresholds: { show: 40, high: 60, critical: 80 },
+    resolveTarget: (intake) => ({
+      dailyTargetAmount:
+        intake.sex === "female" ? "25 g/day" : "38 g/day",
+      currentEstimatedIntake: "~14.5 g/day (GLP-1 average)",
+    }),
+    safetyNote:
+      "Start low (5 g) and titrate weekly. Insoluble bran and high-osmolality fibers (psyllium in large doses, inulin) can worsen GLP-1 bloating.",
   },
 ];
 
-/**
- * Potassium recommendation — ALWAYS food-only. Returned for every profile so
- * the user sees the cautionary guidance regardless of risk score.
- */
 const POTASSIUM_FOOD_ONLY: SupplementRecommendation = {
   id: "potassium",
   name: "Potassium (food only)",
   deficiencyKey: "potassium",
   dose: "Aim for 3,500–4,700 mg/day from food",
   timing: "Spread across meals",
-  form:
-    "Dietary sources only: avocado (1/2 = 487 mg), spinach (1 cup cooked = 840 mg), sweet potato (1 medium = 540 mg), banana (1 medium = 420 mg), white beans, salmon.",
+  form: "Dietary sources only: avocado (½ = 487 mg), spinach (1 cup cooked = 840 mg), sweet potato (1 medium = 540 mg), banana (1 medium = 420 mg), white beans, salmon.",
   why: "Potassium needs are real on GLP-1s — especially with nausea or low-carb diets. But potassium supplements can cause hyperkalemia (cardiac arrhythmia). Always increase via food. If you suspect deficiency, get a lab.",
   priority: "support",
   icon: "🥑",
   caution:
     "Never supplement potassium without lab work. This is a safety rule, not a preference.",
   foodOnly: true,
+  dailyTargetAmount: "3,500–4,700 mg/day from food",
+  currentEstimatedIntake: "~2,186 mg/day (GLP-1 average)",
 };
 
 function resolvePriority(
@@ -152,6 +223,7 @@ function resolvePriority(
 
 export function getSupplementRecommendations(
   profile: DeficiencyProfile,
+  intake: IntakeData,
 ): SupplementRecommendation[] {
   const recs: SupplementRecommendation[] = [];
 
@@ -159,9 +231,10 @@ export function getSupplementRecommendations(
     const score = profile[def.deficiencyKey];
     const priority = resolvePriority(score, def.thresholds);
     if (priority === null) continue;
-    const { thresholds, ...rest } = def;
+    const { thresholds, resolveTarget, ...rest } = def;
     void thresholds;
-    recs.push({ ...rest, priority });
+    const targets = resolveTarget ? resolveTarget(intake, profile) : {};
+    recs.push({ ...rest, ...targets, priority });
   }
 
   recs.push(POTASSIUM_FOOD_ONLY);

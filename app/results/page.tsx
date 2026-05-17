@@ -8,10 +8,19 @@ import SupplementStack from "@/components/SupplementStack";
 import MealPlanView from "@/components/MealPlan";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import WaitlistForm from "@/components/WaitlistForm";
+import CyclePhaseCard from "@/components/CyclePhaseCard";
+import GISupport from "@/components/GISupport";
+import SafetyAlerts from "@/components/SafetyAlerts";
+import ShareProfileButton from "@/components/ShareProfileButton";
 import { RepleteWordmark } from "@/components/RepleteWordmark";
 import { DRUG_LABEL, DURATION_LABEL, DIET_LABEL, DOSE_LABEL } from "@/lib/copy";
 import { getRiskLabel } from "@/lib/deficiency-engine";
-import type { CompleteProfile, RiskTier } from "@/types";
+import type {
+  CompleteProfile,
+  NutrientKey,
+  RiskTier,
+  SupplementRecommendation,
+} from "@/types";
 
 const STORAGE_KEY = "replete_profile";
 
@@ -36,6 +45,19 @@ const TIER_BLURB: Record<RiskTier, string> = {
     "Your risk is low — but GLP-1 nutrition is a moving target. Use this as a baseline. Re-run as your dose increases.",
 };
 
+function isCompleteProfile(value: unknown): value is CompleteProfile {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    "intake" in v &&
+    "profile" in v &&
+    "supplements" in v &&
+    "cycle" in v &&
+    "gi" in v &&
+    "safetyAlerts" in v
+  );
+}
+
 export default function ResultsPage() {
   const router = useRouter();
   const [data, setData] = useState<CompleteProfile | null>(null);
@@ -49,7 +71,12 @@ export default function ResultsPage() {
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as CompleteProfile;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!isCompleteProfile(parsed)) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        router.replace("/intake");
+        return;
+      }
       setData(parsed);
     } catch {
       router.replace("/intake");
@@ -71,7 +98,8 @@ export default function ResultsPage() {
 
   if (!data) return null;
 
-  const { intake, profile, supplements, mealPlan } = data;
+  const { intake, profile, supplements, mealPlan, cycle, gi, safetyAlerts } =
+    data;
   const tier = profile.riskTier;
   const tierLabel = getRiskLabel(profile.overallScore).label;
 
@@ -79,6 +107,14 @@ export default function ResultsPage() {
   const durationLabel = DURATION_LABEL[intake.duration];
   const dietLabel = DIET_LABEL[intake.diet];
   const doseLabel = DOSE_LABEL[intake.dose];
+
+  const targets: Partial<Record<NutrientKey, string>> = supplements.reduce(
+    (acc, s: SupplementRecommendation) => {
+      if (s.dailyTargetAmount) acc[s.deficiencyKey] = s.dailyTargetAmount;
+      return acc;
+    },
+    {} as Partial<Record<NutrientKey, string>>,
+  );
 
   return (
     <div className="bg-gradient-hero">
@@ -98,23 +134,64 @@ export default function ResultsPage() {
             {drugLabel}, {durationLabel.toLowerCase()}, {dietLabel} diet
           </h1>
           <p className="mt-2 text-sm text-sub">
-            {doseLabel} · {intake.symptoms.filter((s) => s !== "none").length}{" "}
-            symptom{intake.symptoms.filter((s) => s !== "none").length === 1
+            {doseLabel} ·{" "}
+            {intake.symptoms.filter((s) => s !== "none").length} symptom
+            {intake.symptoms.filter((s) => s !== "none").length === 1
               ? ""
               : "s"}{" "}
-            reported
+            reported · {intake.weightLbs} lb
           </p>
         </section>
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="card-base flex flex-col p-5 sm:col-span-1">
+        <section className="mt-6">
+          <CyclePhaseCard cycle={cycle} />
+        </section>
+
+        <section className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+          <div className="card-base relative overflow-hidden p-5 sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-widest text-green">
+              Your daily protein target
+            </p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <AnimatedNumber
+                value={profile.dailyProteinTargetG}
+                className="text-6xl font-extrabold text-text sm:text-7xl"
+              />
+              <span className="text-xl font-semibold text-sub">g/day</span>
+            </div>
+            <p className="mt-2 max-w-prose text-sm text-sub">
+              Body-weight scaled. GLP-1 users average 45–65 g/day intake —
+              hitting this target is the single highest-leverage thing you can
+              do to defend lean mass on a GLP-1 (Obesity Pillars, 2025).
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border border-border bg-bg/60 p-3">
+                <p className="font-semibold uppercase tracking-widest text-muted">
+                  Estimated current
+                </p>
+                <p className="mt-1 text-sm font-semibold text-text">
+                  ~55 g/day (GLP-1 average)
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-bg/60 p-3">
+                <p className="font-semibold uppercase tracking-widest text-muted">
+                  Gap to close
+                </p>
+                <p className="mt-1 text-sm font-semibold text-amber">
+                  ~{Math.max(0, profile.dailyProteinTargetG - 55)} g/day
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-base flex flex-col p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted">
               Overall risk
             </p>
             <div className="mt-2 flex items-baseline gap-2">
               <AnimatedNumber
                 value={profile.overallScore}
-                className={`text-5xl font-extrabold ${TIER_COLOR[tier]}`}
+                className={`text-4xl font-extrabold ${TIER_COLOR[tier]}`}
               />
               <span className="text-sm text-muted">/ 95</span>
             </div>
@@ -125,9 +202,28 @@ export default function ResultsPage() {
             </span>
             <p className="mt-3 text-sm text-sub">{TIER_BLURB[tier]}</p>
           </div>
+        </section>
 
-          <div className="sm:col-span-2">
-            <DeficiencyChart profile={profile} />
+        {safetyAlerts.length > 0 ? (
+          <section className="mt-6">
+            <SafetyAlerts alerts={safetyAlerts} />
+          </section>
+        ) : null}
+
+        {gi.active ? (
+          <section className="mt-6">
+            <GISupport gi={gi} />
+          </section>
+        ) : null}
+
+        <section className="mt-8">
+          <h2 className="text-xl font-bold text-text">Per-nutrient targets</h2>
+          <p className="mt-1 text-sm text-sub">
+            Quantitative daily targets alongside your risk score for each
+            nutrient.
+          </p>
+          <div className="mt-3">
+            <DeficiencyChart profile={profile} targets={targets} />
           </div>
         </section>
 
@@ -136,8 +232,8 @@ export default function ResultsPage() {
         <section className="mt-10">
           <h2 className="text-xl font-bold text-text">Your supplement stack</h2>
           <p className="mt-1 text-sm text-sub">
-            Ordered by priority. Forms and doses are based on clinical guidance
-            for GLP-1 users specifically.
+            Ordered by priority, with daily targets and safety notes attached
+            to each line item.
           </p>
           <div className="mt-4">
             <SupplementStack supplements={supplements} />
@@ -147,11 +243,22 @@ export default function ResultsPage() {
         <section className="mt-10">
           <h2 className="text-xl font-bold text-text">Your 3-day meal plan</h2>
           <p className="mt-1 text-sm text-sub">
-            Each meal is small-volume, high nutrient density, and tagged with the
-            deficiency it addresses.
+            Each meal is small-volume, high nutrient density, and tagged with
+            the deficiency it addresses.
           </p>
           <div className="mt-4">
             <MealPlanView plan={mealPlan} />
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="text-xl font-bold text-text">Share your profile</h2>
+          <p className="mt-1 text-sm text-sub">
+            Generates an anonymous link with your drug, duration, diet, and top
+            3 deficiencies. Weight, age, sex, and symptoms are excluded.
+          </p>
+          <div className="mt-3">
+            <ShareProfileButton data={data} />
           </div>
         </section>
 
@@ -170,7 +277,8 @@ export default function ResultsPage() {
               <WaitlistForm profile={data} ctaLabel="Get the full agent" />
             </div>
             <p className="mt-3 text-xs text-muted">
-              No spam. We email when there&apos;s a meaningful update — not before.
+              No spam. We email when there&apos;s a meaningful update — not
+              before.
             </p>
           </div>
         </section>
@@ -188,7 +296,10 @@ function PersonalizedInsight({ data }: { data: CompleteProfile }) {
   const sortedNutrients = (
     Object.entries(profile) as [string, number | string][]
   )
-    .filter(([k]) => !["overallScore", "riskTier"].includes(k))
+    .filter(
+      ([k]) =>
+        !["overallScore", "riskTier", "dailyProteinTargetG"].includes(k),
+    )
     .map(([k, v]) => ({ k, v: Number(v) }))
     .sort((a, b) => b.v - a.v);
 
@@ -202,8 +313,9 @@ function PersonalizedInsight({ data }: { data: CompleteProfile }) {
           Why this profile, specifically
         </p>
         <p className="mt-2 text-sm text-text">
-          On {drugLabel} for {durationLabel} at a {DOSE_LABEL[intake.dose].toLowerCase()},
-          a {dietLabel} eater predictably trends low in{" "}
+          On {drugLabel} for {durationLabel} at a{" "}
+          {DOSE_LABEL[intake.dose].toLowerCase()}, a {dietLabel} eater
+          predictably trends low in{" "}
           <span className="font-semibold text-text">{top.k}</span>
           {second ? (
             <>
@@ -211,8 +323,9 @@ function PersonalizedInsight({ data }: { data: CompleteProfile }) {
               and <span className="font-semibold text-text">{second.k}</span>
             </>
           ) : null}
-          . The 2025 Frontiers in Nutrition data put 88–98% of GLP-1 users below
-          targets for magnesium, iron, vitamin D, potassium, and choline. Your
+          . 13.6% of GLP-1 users develop vitamin D deficiency by 12 months
+          (Butsch et al. 2025, n=461k); average intake of magnesium (266 mg),
+          choline (305 mg), and fiber (14.5 g) all fall short of RDA. Your
           stack below is built around closing those exact gaps.
         </p>
       </div>
