@@ -142,7 +142,7 @@ export function day3Email(): EmailPayload {
   const subject = "The #1 mistake GLP-1 users make with protein";
   const body = `
     <p style="margin:0 0 12px 0;font-size:18px;font-weight:700;color:${TEXT};">Your protein needs didn't drop. Your protein intake did.</p>
-    <p style="margin:0 0 16px 0;color:${SUB};">The most documented downside of GLP-1s isn't the side effects — it's lean mass loss. ~45% of weight lost in the STEP 1 semaglutide trial came from lean tissue (PMC8089287); SURMOUNT-1 tirzepatide came in lower at ~25% (PMC11965027). Either way, it's the part of the story nobody flags up front.</p>
+    <p style="margin:0 0 16px 0;color:${SUB};">Like any rapid caloric deficit, GLP-1 weight loss can include some lean tissue — ~45% of weight lost in STEP 1 (semaglutide, PMC8089287), ~25% in SURMOUNT-1 (tirzepatide, PMC11965027). This isn't unique to GLP-1s; it's true of all deficit-driven loss. Worth flagging because the lever — protein targeting + resistance training — is one most people don't pull until the scale stalls.</p>
     <p style="margin:0 0 16px 0;color:${SUB};">The fix is unglamorous: aim for 1.2–2.0 g of protein per kg of body weight (~0.55–0.9 g per pound), every day, regardless of how little you feel like eating. Whey, Greek yogurt, eggs, fish, cottage cheese — anything that gives you 25 g in a small volume.</p>
     <p style="margin:0 0 0 0;">
       <a href="{{app_url}}/results" style="color:${GREEN};text-decoration:underline;">See your protein recommendation →</a>

@@ -1,10 +1,11 @@
 "use client";
 
-import { Droplets, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Droplets, ShieldAlert } from "lucide-react";
 import type { GIProtocol } from "@/types";
 
-const TRIGGER_LABEL: Record<"nausea" | "constipation", string> = {
+const TRIGGER_LABEL: Record<"nausea" | "vomiting" | "constipation", string> = {
   nausea: "Nausea",
+  vomiting: "Vomiting",
   constipation: "Constipation",
 };
 
@@ -20,17 +21,53 @@ interface Props {
 
 export default function GISupport({ gi }: Props) {
   if (!gi.active) return null;
+  const accent = gi.thiamineUrgent ? "red" : "blue";
   return (
-    <section className="card-base border-l-4 border-l-blue p-5 sm:p-6">
+    <section
+      className={`card-base border-l-4 p-5 sm:p-6 ${
+        gi.thiamineUrgent ? "border-l-red" : "border-l-blue"
+      }`}
+    >
+      {gi.thiamineUrgent ? (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red/40 bg-red/5 p-3">
+          <AlertTriangle
+            className="mt-0.5 h-5 w-5 flex-shrink-0 text-red"
+            aria-hidden
+          />
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold text-text">
+              Persistent vomiting — talk to your prescriber today
+            </p>
+            <p className="mt-1 text-sub">
+              Prolonged vomiting on a GLP-1 elevates the risk of Wernicke&apos;s
+              encephalopathy (rare but serious). Thiamine (B1) is in your
+              recommended stack below. Symptoms that warrant urgent care:
+              confusion, vision changes, balance problems, or inability to
+              keep fluids down for 24+ hr.
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <ShieldAlert className="h-4 w-4 text-blue" aria-hidden />
-        <span className="text-xs font-semibold uppercase tracking-widest text-blue">
+        <ShieldAlert
+          className={`h-4 w-4 ${accent === "red" ? "text-red" : "text-blue"}`}
+          aria-hidden
+        />
+        <span
+          className={`text-xs font-semibold uppercase tracking-widest ${
+            accent === "red" ? "text-red" : "text-blue"
+          }`}
+        >
           GI countermeasure protocol
         </span>
         {gi.triggers.map((t) => (
           <span
             key={t}
-            className="rounded-full bg-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue"
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              t === "vomiting"
+                ? "bg-red/15 text-red"
+                : "bg-blue/15 text-blue"
+            }`}
           >
             {TRIGGER_LABEL[t]}
           </span>

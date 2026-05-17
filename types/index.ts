@@ -25,6 +25,7 @@ export type Symptom =
   | "muscle"
   | "brainfog"
   | "nausea"
+  | "vomiting"
   | "constipation"
   | "none";
 
@@ -51,7 +52,8 @@ export type NutrientKey =
   | "vitaminD"
   | "choline"
   | "potassium"
-  | "fiber";
+  | "fiber"
+  | "thiamine";
 
 export type RiskTier = "high" | "moderate" | "low";
 
@@ -65,6 +67,13 @@ export interface DeficiencyProfile {
   choline: number;
   potassium: number;
   fiber: number;
+  /**
+   * Acute thiamine risk score. Unlike the other nutrients, thiamine does NOT
+   * follow the duration/dose pattern — it is driven purely by GI symptoms
+   * (nausea, vomiting) because Wernicke's encephalopathy is acute, not
+   * gradual. Excluded from the overallScore average for the same reason.
+   */
+  thiamine: number;
   overallScore: number;
   riskTier: RiskTier;
   /** Body-weight-based daily protein target, in grams. */
@@ -106,12 +115,14 @@ export interface CycleAdvice {
 
 export interface GIProtocol {
   active: boolean;
-  triggers: Array<"nausea" | "constipation">;
+  triggers: Array<"nausea" | "vomiting" | "constipation">;
   fluidTargetLitres: number;
   priorityRecommendations: string[];
   pauseSupplements: string[];
   proteinForm: "liquid-only" | "preferred-liquid" | "any";
   notes: string[];
+  /** True if persistent vomiting flagged — surfaces the thiamine/Wernicke's notice. */
+  thiamineUrgent: boolean;
 }
 
 export interface SafetyAlert {

@@ -289,6 +289,11 @@ export const STEPS: StepConfig[] = [
         subtitle: "Triggers our GI countermeasure protocol",
       },
       {
+        value: "vomiting",
+        title: "Vomiting (more than once a week)",
+        subtitle: "Adds thiamine + electrolyte risk — flagged for provider review",
+      },
+      {
         value: "constipation",
         title: "Constipation",
         subtitle: "Fiber, magnesium form, and hydration matter most",

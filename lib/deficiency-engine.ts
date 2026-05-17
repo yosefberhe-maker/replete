@@ -38,7 +38,24 @@ const NUTRIENTS: NutrientKey[] = [
   "choline",
   "potassium",
   "fiber",
+  "thiamine",
 ];
+
+/**
+ * Nutrients whose risk grows linearly with duration on GLP-1 and dose level.
+ * Thiamine is intentionally excluded: it's an *acute* risk tied to vomiting,
+ * not a slow-burn dietary gap.
+ */
+const NUTRIENTS_FOR_DOSE_PATTERN: NutrientKey[] = NUTRIENTS.filter(
+  (k) => k !== "thiamine",
+);
+
+/**
+ * Nutrients included in the overall risk score average. Thiamine is excluded
+ * for the same reason — its score is binary-ish (0 unless GI symptoms) and
+ * would skew the chronic-deficiency average downward for most users.
+ */
+const NUTRIENTS_FOR_OVERALL: NutrientKey[] = NUTRIENTS_FOR_DOSE_PATTERN;
 
 const BASE: Record<NutrientKey, number> = {
   protein: 40,
@@ -50,6 +67,7 @@ const BASE: Record<NutrientKey, number> = {
   choline: 55,
   potassium: 20,
   fiber: 70,
+  thiamine: 0,
 };
 
 const DURATION_BOOST: Record<Duration, number> = {
@@ -99,9 +117,20 @@ const SYMPTOM_MOD: Record<Symptom, Partial<Record<NutrientKey, number>>> = {
   muscle: { protein: 30, magnesium: 15 },
   brainfog: { choline: 25, b12: 18 },
   nausea: { potassium: 18, magnesium: 12 },
+  vomiting: { potassium: 25, magnesium: 18, b12: 10 },
   constipation: { fiber: 20, magnesium: 10 },
   none: {},
 };
+
+/**
+ * Thiamine floor by GI symptom. Nausea floors at 70 (high priority);
+ * persistent vomiting floors at 95 (critical) because of the Wernicke's
+ * encephalopathy case-report literature in GLP-1 users (Urbina et al. 2026).
+ * Thiamine is *never* boosted by duration or dose alone — only by GI
+ * symptoms — so users without those signals don't see the recommendation.
+ */
+const THIAMINE_FLOOR_NAUSEA = 70;
+const THIAMINE_FLOOR_VOMITING = 95;
 
 const MAX_SCORE = 95;
 
@@ -151,7 +180,7 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
 
   const durationBoost = DURATION_BOOST[intake.duration];
   const doseBoost = DOSE_BOOST[intake.dose];
-  for (const key of NUTRIENTS) {
+  for (const key of NUTRIENTS_FOR_DOSE_PATTERN) {
     scores[key] += durationBoost + doseBoost;
   }
 
@@ -178,12 +207,20 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
 
   scores.iron += ironSexAgeBoost(intake.sex, intake.ageRange);
 
+  // Thiamine — acute risk gated by GI symptoms. Floor-based, not additive.
+  if (intake.symptoms.includes("vomiting")) {
+    scores.thiamine = Math.max(scores.thiamine, THIAMINE_FLOOR_VOMITING);
+  } else if (intake.symptoms.includes("nausea")) {
+    scores.thiamine = Math.max(scores.thiamine, THIAMINE_FLOOR_NAUSEA);
+  }
+
   for (const key of NUTRIENTS) {
     scores[key] = clamp(scores[key]);
   }
 
   const overallScore = Math.round(
-    NUTRIENTS.reduce((sum, k) => sum + scores[k], 0) / NUTRIENTS.length,
+    NUTRIENTS_FOR_OVERALL.reduce((sum, k) => sum + scores[k], 0) /
+      NUTRIENTS_FOR_OVERALL.length,
   );
 
   const riskTier = getRiskLabel(overallScore).tier;
@@ -205,6 +242,7 @@ export function calculateDeficiencies(intake: IntakeData): DeficiencyProfile {
     choline: scores.choline,
     potassium: scores.potassium,
     fiber: scores.fiber,
+    thiamine: scores.thiamine,
     overallScore,
     riskTier,
     dailyProteinTargetG,
@@ -230,6 +268,7 @@ export const NUTRIENT_LABELS: Record<NutrientKey, string> = {
   choline: "Choline",
   potassium: "Potassium",
   fiber: "Fiber",
+  thiamine: "Thiamine (B1)",
 };
 
 export const NUTRIENT_KEYS = NUTRIENTS;

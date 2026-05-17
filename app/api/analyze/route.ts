@@ -58,6 +58,7 @@ const VALID_SYMPTOMS: readonly Symptom[] = [
   "muscle",
   "brainfog",
   "nausea",
+  "vomiting",
   "constipation",
   "none",
 ];

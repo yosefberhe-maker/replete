@@ -55,7 +55,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     timing:
       "Within 30 min of waking; second serving post-workout or with dinner",
     form: "Whey isolate, or pea + rice blend for plant-based",
-    why: "GLP-1 users average 45–65 g/day vs the 1.2–2.0 g/kg/day target (Johnson et al. 2025, Obesity Pillars, PMID 41368199). 25–45% of weight lost can come from lean mass — ~45% in the STEP 1 semaglutide body-composition analysis (PMC8089287), ~25% in SURMOUNT-1 tirzepatide (PMC11965027).",
+    why: "GLP-1 users average 45–65 g/day vs the 1.2–2.0 g/kg/day target (Johnson et al. 2025, Obesity Pillars, PMID 41368199). Like all calorie-deficit weight loss, 25–45% of weight lost can come from lean tissue (STEP 1: ~45% semaglutide, PMC8089287; SURMOUNT-1: ~25% tirzepatide, PMC11965027). This isn't unique to GLP-1s — it's true of any rapid deficit — but it's why protein targeting and resistance training matter: users who meet their target preserve significantly more muscle.",
     icon: "🥩",
     thresholds: { show: 40, high: 50, critical: 65 },
     resolveTarget: (_intake, profile) => ({
@@ -111,7 +111,7 @@ const SUPPLEMENTS: SupplementDef[] = [
       currentEstimatedIntake: "~400–600 IU/day from diet (US average)",
     }),
     safetyNote:
-      "If supplementing >2000 IU D3, pair with K2 (MK-7) and ensure adequate dietary calcium (~1,000 mg/day — adapted from obesity-medicine guidance, not GLP-1-specific trial data; individualize based on dietary intake). Do not co-dose calcium with iron.",
+      "If supplementing >2000 IU D3, pair with K2 (MK-7) and ensure adequate calcium: 500–1,000 mg/day from supplements combined with dietary sources, not exceeding 1,200 mg total daily unless prescribed (adapted from obesity-medicine guidance — case reports flag hypercalcemia risk on GLP-1s). Take any calcium supplement in divided doses ≤500 mg, and never within 2 hours of iron.",
   },
   {
     id: "zinc",
@@ -189,6 +189,27 @@ const SUPPLEMENTS: SupplementDef[] = [
     }),
     safetyNote:
       "Start low (5 g) and titrate weekly. Insoluble bran and high-osmolality fibers (psyllium in large doses, inulin) can worsen GLP-1 bloating.",
+  },
+  {
+    id: "thiamine",
+    name: "Thiamine (Vitamin B1)",
+    deficiencyKey: "thiamine",
+    dose: "100 mg/day if vomiting present; B-complex covers maintenance",
+    timing:
+      "With food; IV/IM administration may be needed if vomiting is severe — consult your prescribing provider",
+    form: "Thiamine hydrochloride or benfotiamine; B-complex for routine maintenance",
+    why: "Rare but serious: Wernicke's encephalopathy cases have been reported in GLP-1 users with prolonged vomiting (Urbina et al. 2026, narrative review of case reports). Prolonged GI symptoms combined with reduced intake deplete thiamine rapidly; a standard multivitamin provides ~1.1 mg, but therapeutic doses are needed if vomiting persists.",
+    icon: "💊",
+    thresholds: { show: 40, high: 60, critical: 80 },
+    resolveTarget: () => ({
+      dailyTargetAmount:
+        "100 mg/day if vomiting present; routine multivitamin coverage otherwise",
+      currentEstimatedIntake: "~1.1 mg/day from a standard multivitamin",
+    }),
+    caution:
+      "If experiencing persistent vomiting, discuss thiamine supplementation with your prescribing provider. Wernicke's encephalopathy is rare but serious — symptoms include confusion, vision changes, and balance problems.",
+    safetyNote:
+      "Severe or persistent vomiting on a GLP-1 needs urgent clinical evaluation, not just self-supplementation. This guidance covers thiamine specifically — not the underlying GI issue, which may require dose reduction or IV thiamine.",
   },
 ];
 

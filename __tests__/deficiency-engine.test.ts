@@ -54,6 +54,7 @@ const symptoms: Symptom[] = [
   "muscle",
   "brainfog",
   "nausea",
+  "vomiting",
   "constipation",
   "none",
 ];
@@ -615,6 +616,99 @@ describe("gi-protocol", () => {
       ),
     ).toBe(true);
   });
+
+  it("flips thiamineUrgent when vomiting is present", () => {
+    const protocol = getGIProtocol(["vomiting"]);
+    expect(protocol.active).toBe(true);
+    expect(protocol.thiamineUrgent).toBe(true);
+    expect(protocol.proteinForm).toBe("liquid-only");
+    expect(protocol.pauseSupplements).toContain("iron");
+  });
+
+  it("does not set thiamineUrgent without vomiting", () => {
+    expect(getGIProtocol(["nausea"]).thiamineUrgent).toBe(false);
+    expect(getGIProtocol(["constipation"]).thiamineUrgent).toBe(false);
+    expect(getGIProtocol(["none"]).thiamineUrgent).toBe(false);
+  });
+});
+
+describe("calculateDeficiencies — thiamine acute risk", () => {
+  it("is 0 when no GI symptoms are present", () => {
+    const profile = calculateDeficiencies(baseIntake);
+    expect(profile.thiamine).toBe(0);
+  });
+
+  it("does not grow with duration or dose alone", () => {
+    const longHigh = calculateDeficiencies({
+      ...baseIntake,
+      duration: "12+",
+      dose: "high",
+    });
+    expect(longHigh.thiamine).toBe(0);
+  });
+
+  it("floors at 70 when nausea is reported", () => {
+    const profile = calculateDeficiencies({
+      ...baseIntake,
+      symptoms: ["nausea"],
+    });
+    expect(profile.thiamine).toBeGreaterThanOrEqual(70);
+  });
+
+  it("floors at 95 when vomiting is reported", () => {
+    const profile = calculateDeficiencies({
+      ...baseIntake,
+      symptoms: ["vomiting"],
+    });
+    expect(profile.thiamine).toBeGreaterThanOrEqual(95);
+  });
+
+  it("vomiting wins over nausea when both present", () => {
+    const profile = calculateDeficiencies({
+      ...baseIntake,
+      symptoms: ["nausea", "vomiting"],
+    });
+    expect(profile.thiamine).toBeGreaterThanOrEqual(95);
+  });
+
+  it("is excluded from the overallScore average", () => {
+    // Two intakes with identical chronic deficiencies but one with vomiting:
+    // overallScore should be the same (or very close — within rounding) because
+    // thiamine is excluded from the average.
+    const a = calculateDeficiencies(baseIntake);
+    const b = calculateDeficiencies({ ...baseIntake, symptoms: ["vomiting"] });
+    // Vomiting also adds K +25, mg +18, b12 +10 — those *do* count. So the
+    // overall will rise from those, but if we subtract the thiamine effect
+    // by hand, the difference should match the sum of (K + mg + b12) / 9.
+    const thiamineExcludedDelta = b.overallScore - a.overallScore;
+    expect(thiamineExcludedDelta).toBeLessThan(10);
+  });
+});
+
+describe("supplement-data — thiamine entry", () => {
+  it("is not returned when no GI symptoms are present", () => {
+    const profile = calculateDeficiencies(baseIntake);
+    const recs = getSupplementRecommendations(profile, baseIntake);
+    expect(recs.find((r) => r.deficiencyKey === "thiamine")).toBeUndefined();
+  });
+
+  it("is returned at 'high' priority with nausea alone", () => {
+    const intake: IntakeData = { ...baseIntake, symptoms: ["nausea"] };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
+    const thiamine = recs.find((r) => r.deficiencyKey === "thiamine");
+    expect(thiamine).toBeDefined();
+    expect(thiamine?.priority).toBe("high");
+  });
+
+  it("is returned at 'critical' priority when vomiting is present", () => {
+    const intake: IntakeData = { ...baseIntake, symptoms: ["vomiting"] };
+    const profile = calculateDeficiencies(intake);
+    const recs = getSupplementRecommendations(profile, intake);
+    const thiamine = recs.find((r) => r.deficiencyKey === "thiamine");
+    expect(thiamine).toBeDefined();
+    expect(thiamine?.priority).toBe("critical");
+  });
 });
 
 describe("safety-alerts", () => {
@@ -626,6 +720,45 @@ describe("safety-alerts", () => {
   it("flags calcium/iron stacking as a baseline info alert", () => {
     const alerts = getSafetyAlerts(baseIntake);
     expect(alerts.some((a) => a.id === "no-stacked-calcium-iron")).toBe(true);
+  });
+
+  it("calcium info alert disclosures the 1,200 mg/day cap", () => {
+    const alerts = getSafetyAlerts(baseIntake);
+    const calcium = alerts.find((a) => a.id === "no-stacked-calcium-iron");
+    expect(calcium?.body).toContain("1,200 mg");
+  });
+
+  it("triggers bone-health alert for post-menopausal female on 12+ months", () => {
+    const intake: IntakeData = {
+      ...baseIntake,
+      sex: "female",
+      ageRange: "50-64",
+      duration: "12+",
+    };
+    const alerts = getSafetyAlerts(intake);
+    expect(alerts.some((a) => a.id === "bone-health")).toBe(true);
+  });
+
+  it("does not trigger bone-health alert for pre-menopausal users", () => {
+    const intake: IntakeData = {
+      ...baseIntake,
+      sex: "female",
+      ageRange: "35-49",
+      duration: "12+",
+    };
+    const alerts = getSafetyAlerts(intake);
+    expect(alerts.some((a) => a.id === "bone-health")).toBe(false);
+  });
+
+  it("does not trigger bone-health alert for short-duration users", () => {
+    const intake: IntakeData = {
+      ...baseIntake,
+      sex: "female",
+      ageRange: "65+",
+      duration: "0-3",
+    };
+    const alerts = getSafetyAlerts(intake);
+    expect(alerts.some((a) => a.id === "bone-health")).toBe(false);
   });
 });
 
