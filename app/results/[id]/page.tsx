@@ -10,18 +10,44 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: { code: string };
+  params: { id: string };
 }
+
+const siteName = "Replete";
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const shared = await findSharedProfile(params.code.toUpperCase());
-  if (!shared) return { title: "Replete · Shared profile" };
+  const shared = await findSharedProfile(params.id.toUpperCase());
+  if (!shared) {
+    return {
+      title: "Shared profile",
+      description: "This shared GLP-1 nutrition profile is no longer available.",
+    };
+  }
   const drugLabel = DRUG_LABEL[shared.drug];
+  const durationLabel = DURATION_LABEL[shared.duration].toLowerCase();
+  const dietLabel = DIET_LABEL[shared.diet];
+  const tier = getRiskLabel(shared.overallScore).label;
+  const title = `${drugLabel} · ${dietLabel} diet — ${tier} deficiency risk`;
+  const description = `Anonymous GLP-1 nutrition profile: ${drugLabel}, ${durationLabel}, ${dietLabel} diet. Top 3 deficiency risks ranked.`;
+
   return {
-    title: `${drugLabel} deficiency profile · Replete`,
-    description: `Anonymous deficiency profile shared on Replete: ${drugLabel}, ${DURATION_LABEL[shared.duration].toLowerCase()}, ${DIET_LABEL[shared.diet]} diet.`,
+    title,
+    description,
+    openGraph: {
+      title: `${title} · ${siteName}`,
+      description,
+      type: "article",
+      siteName,
+      images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} · ${siteName}`,
+      description,
+      images: ["/opengraph-image"],
+    },
   };
 }
 
@@ -50,7 +76,7 @@ const PRIORITY_CHIP = {
 } as const;
 
 export default async function SharedProfilePage({ params }: PageProps) {
-  const shared = await findSharedProfile(params.code.toUpperCase());
+  const shared = await findSharedProfile(params.id.toUpperCase());
   if (!shared) notFound();
 
   const drugLabel = DRUG_LABEL[shared.drug];
@@ -152,7 +178,10 @@ export default async function SharedProfilePage({ params }: PageProps) {
               stack, and meal framework in two minutes — synced to your GLP-1
               injection cycle. No account required.
             </p>
-            <Link href="/intake" className="btn-primary mt-5 inline-flex">
+            <Link
+              href="/intake"
+              className="btn-primary mt-5 inline-flex min-h-[44px] items-center"
+            >
               Build my profile
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

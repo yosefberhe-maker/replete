@@ -42,7 +42,7 @@ export default function ShareProfileButton({ data }: Props) {
 
   const shareUrl =
     typeof window !== "undefined" && code
-      ? `${window.location.origin}/r/${code}`
+      ? `${window.location.origin}/results/${code}`
       : null;
 
   function copy() {

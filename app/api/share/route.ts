@@ -3,7 +3,7 @@
  *
  * Receives a CompleteProfile, computes an anonymized view, persists it under
  * a short 6-char alphanumeric code, and returns the code so the client can
- * link to /r/[code]. No PII (weight, exact age) is stored.
+ * link to /results/[id]. No PII (weight, exact age) is stored.
  */
 
 import { NextResponse } from "next/server";
