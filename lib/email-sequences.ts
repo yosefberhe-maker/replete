@@ -142,8 +142,8 @@ export function day3Email(): EmailPayload {
   const subject = "The #1 mistake GLP-1 users make with protein";
   const body = `
     <p style="margin:0 0 12px 0;font-size:18px;font-weight:700;color:${TEXT};">Your protein needs didn't drop. Your protein intake did.</p>
-    <p style="margin:0 0 16px 0;color:${SUB};">The most documented downside of GLP-1s isn't the side effects — it's lean mass loss. In trials, up to 40% of weight lost on semaglutide came from muscle, not fat. That's not what most people signed up for.</p>
-    <p style="margin:0 0 16px 0;color:${SUB};">The fix is unglamorous: hit 0.8–1.0 g of protein per pound of goal bodyweight, every day, regardless of how little you feel like eating. Whey, Greek yogurt, eggs, fish, cottage cheese — anything that gives you 25 g in a small volume.</p>
+    <p style="margin:0 0 16px 0;color:${SUB};">The most documented downside of GLP-1s isn't the side effects — it's lean mass loss. ~45% of weight lost in the STEP 1 semaglutide trial came from lean tissue (PMC8089287); SURMOUNT-1 tirzepatide came in lower at ~25% (PMC11965027). Either way, it's the part of the story nobody flags up front.</p>
+    <p style="margin:0 0 16px 0;color:${SUB};">The fix is unglamorous: aim for 1.2–2.0 g of protein per kg of body weight (~0.55–0.9 g per pound), every day, regardless of how little you feel like eating. Whey, Greek yogurt, eggs, fish, cottage cheese — anything that gives you 25 g in a small volume.</p>
     <p style="margin:0 0 0 0;">
       <a href="{{app_url}}/results" style="color:${GREEN};text-decoration:underline;">See your protein recommendation →</a>
     </p>
@@ -151,7 +151,7 @@ export function day3Email(): EmailPayload {
   return {
     subject,
     html: wrap(subject, body),
-    text: "The #1 mistake GLP-1 users make is letting protein drop with calories. Aim for 0.8–1.0 g per pound of goal bodyweight daily. See your protein recommendation: {{app_url}}/results",
+    text: "The #1 mistake GLP-1 users make is letting protein drop with calories. Aim for 1.2-2.0 g per kg of body weight (~0.55-0.9 g/lb) daily. See your protein recommendation: {{app_url}}/results",
   };
 }
 
@@ -162,7 +162,7 @@ export function day7Email(): EmailPayload {
     <p style="margin:0 0 16px 0;color:${SUB};">Hair growth depends on three things you cut on a GLP-1: total calories, protein, and trace minerals — especially zinc and iron. The shedding usually starts around month 3, peaks around month 6, and resolves once you close the gap.</p>
     <p style="margin:0 0 8px 0;color:${TEXT};font-weight:600;">The fix is a stack, not a single nutrient:</p>
     <ul style="margin:0 0 16px 18px;padding:0;color:${SUB};">
-      <li style="margin-bottom:6px;">Protein at 0.8–1.0 g/lb of goal bodyweight</li>
+      <li style="margin-bottom:6px;">Protein at 1.2–2.0 g/kg body weight (~0.55–0.9 g/lb)</li>
       <li style="margin-bottom:6px;">Zinc picolinate 25 mg/day with food</li>
       <li style="margin-bottom:6px;">Iron bisglycinate 18–36 mg/day (with vitamin C, away from coffee)</li>
     </ul>
@@ -171,7 +171,7 @@ export function day7Email(): EmailPayload {
   return {
     subject,
     html: wrap(subject, body),
-    text: "Hair thinning on GLP-1s correlates with zinc, iron, and protein. Stack: protein 0.8-1.0 g/lb goal bodyweight + zinc 25mg + iron bisglycinate 18-36mg with vitamin C.",
+    text: "Hair thinning on GLP-1s correlates with zinc, iron, and protein. Stack: protein 1.2-2.0 g/kg body weight (~0.55-0.9 g/lb) + zinc 25mg + iron bisglycinate 18-36mg with vitamin C.",
   };
 }
 

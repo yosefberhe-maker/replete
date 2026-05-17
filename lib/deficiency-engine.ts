@@ -18,8 +18,12 @@ import type {
  *
  * Core IP. Maps intake to per-nutrient risk scores (0-95), an overall risk
  * tier, and quantitative daily targets. Algorithm constants and clinical
- * priors are calibrated against the 2025-2026 GLP-1 nutrition literature
- * (Butsch et al. 2025, Urbina et al. Clinical Obesity, Obesity Pillars 2025).
+ * priors are calibrated against:
+ *   - Butsch et al. 2025, Obesity Pillars, n=461,382 (DOI 10.1016/j.obpill.2025.100186)
+ *   - Johnson et al. 2025, Obesity Pillars (PMID 41368199) — broad protein + MVI guidance only
+ *   - Frontiers in Nutrition, March 2025, n=69 cross-sectional (DOI 10.3389/fnut.2025.1566498)
+ *   - Melis et al. 2025, Diabetes Obesity Metab, n=51 — iron absorption mechanism
+ *   - STEP 1 (PMC8089287) and SURMOUNT-1 (PMC11965027) — lean mass loss range
  *
  * Do not loosen typing or short-circuit branches without updating the tests.
  */
@@ -79,7 +83,7 @@ const DRUG_MOD: Record<Drug, Partial<Record<NutrientKey, number>>> = {
 /**
  * Duration-specific nutrient boosts that go BEYOND the linear duration boost.
  * Reflects the clinical doubling of vitamin D deficiency at 12+ months
- * (Butsch et al. 2025: 7.5% at 6 mo → 13.6% at 12 mo, n=461k).
+ * (Butsch et al. 2025, Obesity Pillars: 7.5% at 6 mo → 13.6% at 12 mo, n=461,382).
  */
 const LONG_DURATION_NUTRIENT_BOOST: Partial<
   Record<Duration, Partial<Record<NutrientKey, number>>>
@@ -119,8 +123,13 @@ function ironSexAgeBoost(sex: Sex, age: AgeRange): number {
 }
 
 /**
- * Protein target in grams, body-weight scaled per Obesity Pillars 2025
- * (1.0-1.6+ g/kg). Active users and long-duration high-dose users get bumped.
+ * Protein target in grams, body-weight scaled per Johnson et al. 2025
+ * (Obesity Pillars, PMID 41368199): 1.2–2.0 g/kg/day for GLP-1 users.
+ *
+ *   - 1.2 g/kg baseline (matches the floor of the recommended range)
+ *   - 1.6 g/kg for active users (resistance training pushes upper-mid range)
+ *   - 2.0 g/kg for long-duration high-dose users (most aggressive lean-mass
+ *     defense window — high cumulative deficit, highest sarcopenia risk)
  */
 export function calculateProteinTargetG(
   weightLbs: number,
@@ -132,8 +141,8 @@ export function calculateProteinTargetG(
   const longDurationHighDose =
     (duration === "6-12" || duration === "12+") && dose === "high";
   let factor = 1.2;
-  if (activity === "active") factor = 1.4;
-  if (longDurationHighDose) factor = 1.6;
+  if (activity === "active") factor = 1.6;
+  if (longDurationHighDose) factor = 2.0;
   return Math.round(weightKg * factor);
 }
 

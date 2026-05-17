@@ -160,9 +160,10 @@ export default function ResultsPage() {
               <span className="text-xl font-semibold text-sub">g/day</span>
             </div>
             <p className="mt-2 max-w-prose text-sm text-sub">
-              Body-weight scaled. GLP-1 users average 45–65 g/day intake —
-              hitting this target is the single highest-leverage thing you can
-              do to defend lean mass on a GLP-1 (Obesity Pillars, 2025).
+              Body-weight scaled to 1.2–2.0 g/kg per Johnson et al. 2025
+              (Obesity Pillars, PMID 41368199). GLP-1 users average 45–65 g/day
+              intake — hitting this target is the single highest-leverage thing
+              you can do to defend lean mass.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-lg border border-border bg-bg/60 p-3">
@@ -324,9 +325,11 @@ function PersonalizedInsight({ data }: { data: CompleteProfile }) {
             </>
           ) : null}
           . 13.6% of GLP-1 users develop vitamin D deficiency by 12 months
-          (Butsch et al. 2025, n=461k); average intake of magnesium (266 mg),
-          choline (305 mg), and fiber (14.5 g) all fall short of RDA. Your
-          stack below is built around closing those exact gaps.
+          (Butsch et al. 2025, Obesity Pillars, n=461,382); a separate
+          cross-sectional study (Frontiers in Nutrition, March 2025, n=69)
+          found average intakes of magnesium (266 mg), choline (305 mg), and
+          fiber (14.5 g) all short of RDA. Your stack below closes those exact
+          gaps.
         </p>
       </div>
     </section>

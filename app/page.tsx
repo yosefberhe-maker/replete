@@ -94,16 +94,16 @@ function StatsStrip() {
         <div className="grid gap-6 sm:grid-cols-3">
           {[
             {
-              big: "88–98%",
-              label: "GLP-1 users below magnesium targets",
-            },
-            {
               big: "13.6%",
-              label: "develop vitamin D deficiency by 12 months",
+              label: "develop vitamin D deficiency by 12 months on a GLP-1",
             },
             {
-              big: "26–30%",
-              label: "lower ferritin vs SGLT2i comparators",
+              big: "266 mg",
+              label: "average daily magnesium intake vs the 400 mg RDA",
+            },
+            {
+              big: "14.5 g",
+              label: "average daily fiber intake vs the 25–38 g RDA",
             },
           ].map((s) => (
             <div key={s.big} className="text-center sm:text-left">
@@ -115,7 +115,7 @@ function StatsStrip() {
           ))}
         </div>
         <p className="mt-6 text-center text-xs text-muted sm:text-left">
-          Sources: Frontiers in Nutrition (2025) · Butsch et al. (2025, n=461,000) · Urbina et al., Clinical Obesity · Joint Advisory, ACLM / ASN / OMA / The Obesity Society (2025)
+          Sources: Butsch et al. 2025, Obesity Pillars (n=461,382) · Frontiers in Nutrition, March 2025 (cross-sectional, n=69) · Johnson et al. 2025, Obesity Pillars
         </p>
       </div>
     </section>
@@ -180,12 +180,11 @@ function Credibility() {
           Built on peer-reviewed clinical research
         </p>
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-sub">
-          <span>American College of Lifestyle Medicine</span>
-          <span>American Society for Nutrition</span>
-          <span>The Obesity Society</span>
-          <span>Obesity Medicine Association</span>
-          <span>Frontiers in Nutrition (2025)</span>
-          <span>Butsch et al. (Clinical Obesity, 2025)</span>
+          <span>Butsch et al. — Obesity Pillars (2025, n=461,382)</span>
+          <span>Johnson et al. — Obesity Pillars (2025)</span>
+          <span>Frontiers in Nutrition (March 2025, n=69)</span>
+          <span>STEP 1 body-composition analysis</span>
+          <span>SURMOUNT-1 body-composition analysis</span>
         </div>
       </div>
     </section>

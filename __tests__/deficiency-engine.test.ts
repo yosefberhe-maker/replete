@@ -308,16 +308,16 @@ describe("calculateProteinTargetG", () => {
     expect(target).toBe(Math.round(kg * 1.2));
   });
 
-  it("bumps to 1.4 g/kg for active users", () => {
+  it("bumps to 1.6 g/kg for active users", () => {
     const target = calculateProteinTargetG(180, "active", "0-3", "starter");
     const kg = 180 / 2.2046;
-    expect(target).toBe(Math.round(kg * 1.4));
+    expect(target).toBe(Math.round(kg * 1.6));
   });
 
-  it("bumps to 1.6 g/kg for long-duration + high-dose", () => {
+  it("bumps to 2.0 g/kg for long-duration + high-dose", () => {
     const target = calculateProteinTargetG(180, "moderate", "12+", "high");
     const kg = 180 / 2.2046;
-    expect(target).toBe(Math.round(kg * 1.6));
+    expect(target).toBe(Math.round(kg * 2.0));
   });
 });
 

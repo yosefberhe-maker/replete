@@ -55,7 +55,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     timing:
       "Within 30 min of waking; second serving post-workout or with dinner",
     form: "Whey isolate, or pea + rice blend for plant-based",
-    why: "GLP-1 users average 45–65 g/day vs the 1.0–1.6 g/kg target (Obesity Pillars, 2025). Up to 20–50% of weight lost on GLP-1s can come from lean mass without targeted protein.",
+    why: "GLP-1 users average 45–65 g/day vs the 1.2–2.0 g/kg/day target (Johnson et al. 2025, Obesity Pillars, PMID 41368199). 25–45% of weight lost can come from lean mass — ~45% in the STEP 1 semaglutide body-composition analysis (PMC8089287), ~25% in SURMOUNT-1 tirzepatide (PMC11965027).",
     icon: "🥩",
     thresholds: { show: 40, high: 50, critical: 65 },
     resolveTarget: (_intake, profile) => ({
@@ -70,7 +70,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "200–400 mg",
     timing: "30 min before bed",
     form: "Glycinate (not oxide — poor absorption, worsens existing GLP-1 motility issues)",
-    why: "Average GLP-1 user intake is 266 mg/day vs the 400–420 mg RDA. Magnesium glycinate is critical for GLP-1 users — oxide forms drive GI distress in an already slow-emptying stomach.",
+    why: "GLP-1 users average 266 mg/day vs the 400–420 mg RDA (cross-sectional study, n=69; Frontiers in Nutrition, March 2025, DOI 10.3389/fnut.2025.1566498). Glycinate is preferred — oxide drives GI distress in an already slow-emptying stomach.",
     icon: "🌙",
     thresholds: { show: 35, high: 60 },
     resolveTarget: () => ({
@@ -102,7 +102,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "2000–4000 IU D3 + 100 mcg K2 (MK-7)",
     timing: "With your largest fat-containing meal",
     form: "D3 (cholecalciferol) with K2 for bone/cardiovascular co-factor",
-    why: "13.6% of long-term GLP-1 users develop vitamin D deficiency by 12 months vs 7.5% at 6 months (Butsch et al., 2025, n=461,000). Reduced dietary volume and sun-seeking behavior both contribute.",
+    why: "13.6% of long-term GLP-1 users develop vitamin D deficiency by 12 months vs 7.5% at 6 months (Butsch et al. 2025, Obesity Pillars, n=461,382; DOI 10.1016/j.obpill.2025.100186). Reduced dietary volume and sun-seeking behavior both contribute.",
     icon: "☀️",
     thresholds: { show: 30, high: 55 },
     resolveTarget: (_intake, profile) => ({
@@ -111,7 +111,7 @@ const SUPPLEMENTS: SupplementDef[] = [
       currentEstimatedIntake: "~400–600 IU/day from diet (US average)",
     }),
     safetyNote:
-      "If supplementing >2000 IU D3, pair with K2 (MK-7) and adequate dietary calcium (~1000 mg). Don't co-dose calcium with iron — they compete for absorption.",
+      "If supplementing >2000 IU D3, pair with K2 (MK-7) and ensure adequate dietary calcium (~1,000 mg/day — adapted from obesity-medicine guidance, not GLP-1-specific trial data; individualize based on dietary intake). Do not co-dose calcium with iron.",
   },
   {
     id: "zinc",
@@ -137,7 +137,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "18–36 mg",
     timing: "Morning, with vitamin C; away from coffee, tea, calcium, thyroid meds",
     form: "Ferrous bisglycinate (gentle on GI vs. ferrous sulfate)",
-    why: "GLP-1 users show 26–30% lower serum ferritin vs matched SGLT2-inhibitor controls. Menstruating women face compounded depletion. Excess iron is hepatotoxic — confirm ferritin before supplementing.",
+    why: "Mechanistic evidence suggests GLP-1 receptor agonists reduce intestinal iron absorption (Melis et al. 2025, Diabetes Obesity Metab, n=51). Women of reproductive age face compounded depletion from menstrual losses on a reduced-volume diet. Excess iron is hepatotoxic — confirm serum ferritin before supplementing.",
     icon: "🩸",
     thresholds: { show: 40, high: 50, critical: 65 },
     resolveTarget: (intake) => {
@@ -163,7 +163,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "250–500 mg",
     timing: "Morning",
     form: "Citicoline (CDP-Choline) — more bioavailable than choline bitartrate",
-    why: "Average GLP-1 user intake is 305 mg/day vs 425–550 mg adequate intake. Choline supports hepatic fat metabolism — relevant because rapid GLP-1 weight loss can trigger transient NAFLD.",
+    why: "GLP-1 users average 305 mg/day vs 425–550 mg adequate intake (cross-sectional study, n=69; Frontiers in Nutrition, March 2025, DOI 10.3389/fnut.2025.1566498). Choline supports hepatic fat metabolism — relevant because rapid GLP-1 weight loss can trigger transient NAFLD.",
     icon: "🧠",
     thresholds: { show: 40, high: 60 },
     resolveTarget: (intake) => ({
@@ -179,7 +179,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     dose: "Start 5 g/day, titrate to 15–25 g over 4 weeks",
     timing: "Split into 2 doses with meals; add 250 mL extra water per serving",
     form: "Resistant dextrin (e.g. Benefiber) — low-osmolality, GI-tolerable for slow gastric emptying",
-    why: "GLP-1 users average 14.5 g/day fiber vs the 25–38 g RDA — a near-universal gap. Critical for managing constipation, which compounds on slow-emptying gastric motility.",
+    why: "GLP-1 users average 14.5 g/day vs the 25–38 g RDA (cross-sectional study, n=69; Frontiers in Nutrition, March 2025, DOI 10.3389/fnut.2025.1566498). Critical for managing constipation on slow-emptying gastric motility.",
     icon: "🌾",
     thresholds: { show: 40, high: 60, critical: 80 },
     resolveTarget: (intake) => ({
@@ -206,7 +206,8 @@ const POTASSIUM_FOOD_ONLY: SupplementRecommendation = {
     "Never supplement potassium without lab work. This is a safety rule, not a preference.",
   foodOnly: true,
   dailyTargetAmount: "3,500–4,700 mg/day from food",
-  currentEstimatedIntake: "~2,186 mg/day (GLP-1 average)",
+  currentEstimatedIntake:
+    "~2,186 mg/day (Frontiers in Nutrition, March 2025, cross-sectional n=69)",
 };
 
 function resolvePriority(
