@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { RepleteWordmark } from "@/components/RepleteWordmark";
 import { findSharedProfile } from "@/lib/storage";
+import { isRenderableSharedProfile } from "@/lib/profile-validation";
 import { getRiskLabel } from "@/lib/deficiency-engine";
 import { DRUG_LABEL, DURATION_LABEL, DIET_LABEL, DOSE_LABEL } from "@/lib/copy";
 import type { Metadata } from "next";
@@ -19,7 +20,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const shared = await findSharedProfile(params.id.toUpperCase());
-  if (!shared) {
+  if (!isRenderableSharedProfile(shared)) {
     return {
       title: "Shared profile",
       description: "This shared GLP-1 nutrition profile is no longer available.",
@@ -77,7 +78,7 @@ const PRIORITY_CHIP = {
 
 export default async function SharedProfilePage({ params }: PageProps) {
   const shared = await findSharedProfile(params.id.toUpperCase());
-  if (!shared) notFound();
+  if (!isRenderableSharedProfile(shared)) notFound();
 
   const drugLabel = DRUG_LABEL[shared.drug];
   const tierLabel = getRiskLabel(shared.overallScore).label;

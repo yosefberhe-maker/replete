@@ -18,6 +18,7 @@ import ReviewedBadge from "@/components/ReviewedBadge";
 import { RepleteWordmark } from "@/components/RepleteWordmark";
 import { DRUG_LABEL, DURATION_LABEL, DIET_LABEL, DOSE_LABEL } from "@/lib/copy";
 import { getRiskLabel } from "@/lib/deficiency-engine";
+import { isCompleteProfile } from "@/lib/profile-validation";
 import type {
   CompleteProfile,
   NutrientKey,
@@ -47,19 +48,6 @@ const TIER_BLURB: Record<RiskTier, string> = {
   low:
     "Your risk is low — but GLP-1 nutrition is a moving target. Use this as a baseline. Re-run as your dose increases.",
 };
-
-function isCompleteProfile(value: unknown): value is CompleteProfile {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    "intake" in v &&
-    "profile" in v &&
-    "supplements" in v &&
-    "cycle" in v &&
-    "gi" in v &&
-    "safetyAlerts" in v
-  );
-}
 
 export default function ResultsPage() {
   const router = useRouter();
